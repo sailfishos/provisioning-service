@@ -1,0 +1,26 @@
+#!/usr/bin/python
+
+import dbus
+from dbus import ByteArray
+
+bus = dbus.SystemBus()
+
+provisioning = dbus.Interface(bus.get_object('org.nemomobile.provisioning', '/'),
+						'org.nemomobile.provisioning.interface')
+
+s1 = dbus.String("")
+s2 = dbus.String("")
+u1 = dbus.UInt32(0)
+u2 = dbus.UInt32(0)
+i1 = int(0)
+i2 = int(0)
+s3 = dbus.String("")
+f = open('prov.wbxml', 'r')
+content = f.read()
+bytes = ByteArray(content)
+
+try:
+	provisioning.HandleProvisioningMessage(s1,s2,u1,u2,i1,i2,s3,bytes, timeout = 0)
+except dbus.exceptions.DBusException:
+	pass
+

@@ -1,0 +1,87 @@
+Fix main.c provisioning_handle_message:
+-to handle multiple requests.
+-move xml parsing call from provisioning-decoder Provisioning_decodeWBXML to
+provisioning_handle_message.
+
+Re-think main.c and provisioning-receiver:
+-perhaps main should only handle creation and destruction.
+-provisioning-receiver receiving of the message and further processing i.e. sending
+wbxml to decoder etc.
+-have separate dbus handler i.e. the one that creates dbus interface etc when
+told by main and forwwards received dbus messages to receiver.
+
+provisioning-ofono:
+-if no matching context it should create one.
+-if matching context active it should deactivate it
+-clean up not very well done
+
+Parse functions look ugly fix them(see parse_w4 1st while get_addr for example)
+
+fix provisioning-xml-parser:
+-to parse according to elements/nodes e.g.
+APPLICATION
+-APPID
+-NAME
+-ADDR
+-TO-PROXY
+PXLOGICAL
+-PROXY-ID
+-PXPHYSICAL
+--PXADDR
+--PORT
+---PORTNBR
+NAPDEF
+-NAME
+-INTERNET
+
+NOTE! above is how it's doing it now so not perhaps the correct way but idea
+would be to parse according to main branches i.e. APPLICATION, PXLOGICAL,
+NAPDEF first and possibly(most likely) have a list ofeach item then link
+correct branches to each other and then create w2/w4 structures.
+
+Explain parsing logic somewhere:
+e.g. the structure of the tree parsing could be like this i.e. PORT is searched
+from multiple places.
+
+APPLICATION
+-APPADDR
+--PORT
+-APPAUTH
+-RESOURCE
+BOOTSTRAP
+PXLOGICAL
+-PORT
+-PXPHYSICAL
+--PORT
+NAPDEF
+-NAPAUTHINFO
+
+open item:
+-Not sure but PORT might be also under PXLOGICAL
+
+Some rudimentary structure explained somewhere e.g.
+-decoder decodes wbxml to prov1.0 xml format.
+-receiver and main create dbus interface + handle received dbus message by
+passing it to a: decoder b: xml parser c: ofono sender.
+-xml parses prov1.0 xml(to structures?)
+-provisioning-ofono opens dbus connection to ofono checks that gprs interface
+exists and creates ofono calls using context structures created by xml parser.
+
+Make installable i.e.
+-service file is copied to right place
+-provisioning.conf is copied to right place
+-create and copy .conf file for ofono to /etc/ofono/push_forwarder.d/
+
+Write limitations e.g.
+-provisioning parsing only for ofono purposes e.g. preferred internet start
+page is not parsed.
+
+Change parser to use libwbxml to parse the provisioning data and remove libxml
+dependency.
+-Q: how does libwbxml actually work? Does it create a tree from which it parses
+or does it parse each query separately i.e. would it actually be more efficient
+than the current way?
+
+Fix logging to start using parameter i.e. running with -d would enable logging.
+
+
