@@ -87,7 +87,6 @@ static void clean_provisioning()
 
 static gboolean check_idle()
 {
-	LOG("check_idle");
 	if (call_counter > 0)
 		return TRUE;
 
@@ -198,7 +197,7 @@ exit:
 }
 
 static int set_context_property(struct modem_data *modem, const char *path,
-				const char *property, const char *value)
+				const char *property, const char *value, gboolean active)
 {
 	DBusConnection *conn = modem->conn;
 	DBusMessage *msg;
@@ -216,11 +215,20 @@ static int set_context_property(struct modem_data *modem, const char *path,
 
 	dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &property);
 
-	dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
+	if (value) {
+		dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
 						DBUS_TYPE_STRING_AS_STRING,
 						&val);
 
-	dbus_message_iter_append_basic(&val, DBUS_TYPE_STRING, &value);
+		dbus_message_iter_append_basic(&val, DBUS_TYPE_STRING, &value);
+	} else {
+		dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
+						DBUS_TYPE_BOOLEAN_AS_STRING,
+						&val);
+
+		dbus_message_iter_append_basic(&val, DBUS_TYPE_BOOLEAN, &active);
+	}
+
 	dbus_message_iter_close_container(&iter, &val);
 
 	if (dbus_connection_send_with_reply(conn, msg, &call, -1) == FALSE) {
@@ -405,22 +413,22 @@ static gboolean create_contexts(struct modem_data *modem)
 
 static int deactivate_context(struct modem_data *modem, const char *path)
 {
-	return set_context_property(modem, path, "Active", FALSE);
+	return set_context_property(modem, path, "Active", NULL, FALSE);
 }
 
 static void set_w2_context_property(struct modem_data *modem, struct w2 *net)
 {
 	if (net->apn)
-		set_context_property(modem, modem->oi->context_path, "AccessPointName", net->apn);
+		set_context_property(modem, modem->oi->context_path, "AccessPointName", net->apn, FALSE);
 
 	if (net->name)
-		set_context_property(modem, modem->oi->context_path, "Name", net->name);
+		set_context_property(modem, modem->oi->context_path, "Name", net->name, FALSE);
 
 	if (net->username)
-		set_context_property(modem, modem->oi->context_path, "Username", net->name);
+		set_context_property(modem, modem->oi->context_path, "Username", net->name, FALSE);
 
 	if (net->password)
-		set_context_property(modem, modem->oi->context_path, "Password", net->name);
+		set_context_property(modem, modem->oi->context_path, "Password", net->name, FALSE);
 
 }
 
@@ -454,16 +462,16 @@ static void provisioning_w2(struct modem_data *modem, struct w2 *net)
 static void set_internet_context_property(struct modem_data *modem, struct internet *net)
 {
 	if (net->apn)
-		set_context_property(modem, modem->oi->context_path, "AccessPointName", net->apn);
+		set_context_property(modem, modem->oi->context_path, "AccessPointName", net->apn, FALSE);
 
 	if (net->name)
-		set_context_property(modem, modem->oi->context_path, "Name", net->name);
+		set_context_property(modem, modem->oi->context_path, "Name", net->name, FALSE);
 
 	if (net->username)
-		set_context_property(modem, modem->oi->context_path, "Username", net->name);
+		set_context_property(modem, modem->oi->context_path, "Username", net->name, FALSE);
 
 	if (net->password)
-		set_context_property(modem, modem->oi->context_path, "Password", net->name);
+		set_context_property(modem, modem->oi->context_path, "Password", net->name, FALSE);
 
 }
 
@@ -517,23 +525,23 @@ static void set_mms_context_property(struct modem_data *modem, struct w4 *mms)
 	char *mms_proxy;
 
 	if (mms->apn)
-		set_context_property(modem, modem->omms->context_path, "AccessPointName", mms->apn);
+		set_context_property(modem, modem->omms->context_path, "AccessPointName", mms->apn, FALSE);
 
 	if (mms->name)
-		set_context_property(modem, modem->omms->context_path, "Name", mms->name);
+		set_context_property(modem, modem->omms->context_path, "Name", mms->name, FALSE);
 
 	if (mms->username)
-		set_context_property(modem, modem->omms->context_path, "Username", mms->name);
+		set_context_property(modem, modem->omms->context_path, "Username", mms->name, FALSE);
 
 	if (mms->password)
-		set_context_property(modem, modem->omms->context_path, "Password", mms->name);
+		set_context_property(modem, modem->omms->context_path, "Password", mms->name, FALSE);
 
 	if (mms->messagecenter)
-		set_context_property(modem, modem->omms->context_path, "MessageCenter", mms->messagecenter);
+		set_context_property(modem, modem->omms->context_path, "MessageCenter", mms->messagecenter, FALSE);
 
 	mms_proxy = create_mms_proxy(mms);
 	if (mms_proxy)
-		set_context_property(modem, modem->omms->context_path, "MessageProxy", mms_proxy);
+		set_context_property(modem, modem->omms->context_path, "MessageProxy", mms_proxy, FALSE);
 
 	g_free(mms_proxy);
 
