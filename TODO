@@ -84,4 +84,3 @@ than the current way?
 
 Fix logging to start using parameter i.e. running with -d would enable logging.
 
-fix idle so that it wont be called all the time. E.g use timer if not cleaning.
