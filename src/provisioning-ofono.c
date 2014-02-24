@@ -67,7 +67,9 @@ struct modem_data *ofono_modem;
 
 guint call_counter;
 guint idle_id;
+guint timer_id;
 
+static gboolean check_idle();
 static void provisioning_internet(struct modem_data *modem, struct internet *net);
 static void provisioning_mms(struct modem_data *modem, struct w4 *mms);
 static void provisioning_w2(struct modem_data *modem, struct w2 *mms);
@@ -80,19 +82,32 @@ static void clean_provisioning()
 	if (idle_id > 0)
 		g_source_remove(idle_id);
 
+	if (timer_id > 0)
+		g_source_remove(timer_id);
+
 	remove_modem();
 	clean_provisioning_data();
 	handle_exit(NULL);
 }
 
-static gboolean check_idle()
+static gboolean reset_idle_check()
 {
-	if (call_counter > 0)
-		return TRUE;
-
-	clean_provisioning();
+	idle_id = g_idle_add(check_idle,NULL);
 	return FALSE;
 }
+
+static gboolean check_idle()
+{
+	if (call_counter > 0) {
+		timer_id = g_timeout_add_seconds(2, reset_idle_check, NULL);
+		goto out;
+	}
+
+	clean_provisioning();
+out:
+	return FALSE;
+}
+
 static void set_context_property_reply(DBusPendingCall *call, void *user_data)
 {
 	DBusMessage *reply = dbus_pending_call_steal_reply(call);
