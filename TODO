@@ -8,11 +8,9 @@ Re-think main.c and provisioning-receiver:
 -provisioning-receiver receiving of the message and further processing i.e. sending
 wbxml to decoder etc.
 -have separate dbus handler i.e. the one that creates dbus interface etc when
-told by main and forwwards received dbus messages to receiver.
+told by main and forwards received dbus messages to receiver.
 
 provisioning-ofono:
--if no matching context it should create one.
--if matching context active it should deactivate it
 -clean up not very well done
 
 Parse functions look ugly fix them(see parse_w4 1st while get_addr for example)
@@ -66,11 +64,6 @@ passing it to a: decoder b: xml parser c: ofono sender.
 -xml parses prov1.0 xml(to structures?)
 -provisioning-ofono opens dbus connection to ofono checks that gprs interface
 exists and creates ofono calls using context structures created by xml parser.
-
-Make installable i.e.
--service file is copied to right place
--provisioning.conf is copied to right place
--create and copy .conf file for ofono to /etc/ofono/push_forwarder.d/
 
 Write limitations e.g.
 -provisioning parsing only for ofono purposes e.g. preferred internet start
