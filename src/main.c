@@ -16,6 +16,7 @@
  *
  */
 
+#include <string.h>
 #include <glib.h>
 #include <dbus/dbus.h>
 #include "provisioning.h"
@@ -30,7 +31,15 @@
 #define PROVISIONING_SERVICE_PATH "/"
 
 static GMainLoop *loop;
-struct timeout_handler *exit_handler = NULL;
+struct timeout_handler *exit_handler;
+GSList *msglist;
+
+struct provisioning_request {
+	char *array; /* Byte array containing client request*/
+	int array_len; /* Length of request byte array */
+};
+
+static gboolean handle_message(char *array, int array_len);
 
 static void provisioning_exit(void)
 {
@@ -40,33 +49,77 @@ static void provisioning_exit(void)
 gboolean handle_exit(gpointer user_data)
 {
 	struct timeout_handler *handler = user_data;
+	struct provisioning_request *req;
 
 	if (handler) {
 		handler->id = 0;
 		g_free(handler);
 	}
 
-	provisioning_exit();
-	LOG("provisioning_exit");
+	GSList *l = NULL;
+	if (msglist != NULL)
+		l = g_slist_last(msglist);
+
+	if (l != NULL) {
+		req = l->data;
+		g_free(req->array);
+		g_free(req);
+		msglist = g_slist_remove(msglist,l->data);
+	}
+
+	if (msglist == NULL) {
+		provisioning_exit();
+		LOG("provisioning_exit");
+	} else {
+		l = g_slist_last(msglist);
+		if (l != NULL) {
+			req = l->data;
+			handle_message(req->array,req->array_len);
+		}
+	}
+
 	return FALSE;
+}
+
+static gboolean handle_message(char *array, int array_len)
+{
+
+	LOG("handle_message");
+
+	if (array_len < 0)
+		goto error;
+
+#if 0 /*used for testing*/
+	char *file_name = "received_wbxml";
+	print_to_file(array, array_len, file_name);
+#endif
+
+	if (!decode_provisioning_wbxml(array, array_len))
+		goto error;
+
+	if (provisioning_init_ofono() < 0) {
+		provisioning_exit_ofono();
+		goto error;
+	}
+
+	LOG("provisioning_handle_message: SUCCESS");
+	return TRUE;
+error:
+	return FALSE;
+
 }
 
 static DBusMessage *provisioning_handle_message(DBusConnection *conn,
 					DBusMessage *msg, void *data)
 {
+	struct provisioning_request *req, *lastreq;
 	char *array; /* Byte array containing client request*/
 	int array_len; /* Length of request byte array */
 	DBusMessageIter iter;
 	DBusMessageIter subiter;
+	GSList *l;
 
 	LOG("provisioning_handle_message");
-
-	/*
-	 * if multiple requests not sure what happens so something like this
-	 * prob needed
-	 * if (pending)
-	 * 	return error_busy(msg);
-	 */
 
 	if (exit_handler) {
 		if(exit_handler->id > 0) {
@@ -100,23 +153,25 @@ static DBusMessage *provisioning_handle_message(DBusConnection *conn,
 
 	dbus_message_iter_get_fixed_array(&subiter, &array, &array_len);
 
-	if (array_len < 0)
+	req = g_try_new0(struct provisioning_request, 1);
+	if (req == NULL)
 		goto error;
 
-#if 0 //used for testing
-	char *file_name = "received_wbxml";
-	print_to_file(array, array_len, file_name);
-#endif
-	if (!decode_provisioning_wbxml(array, array_len))
+	req->array_len = array_len;
+	req->array = g_try_new0(char, req->array_len);
+	if (req->array == NULL)
 		goto error;
 
-	if (provisioning_init_ofono() < 0) {
-		provisioning_exit_ofono();
-		goto error;
-	}
+	memcpy(req->array, array, req->array_len);
 
-	LOG("provisioning_handle_message: SUCCESS");
-	return NULL;
+	msglist = g_slist_prepend(msglist, req);
+
+	l = g_slist_last(msglist);
+	lastreq = l->data;
+	if (lastreq == req)
+		if (handle_message(lastreq->array,lastreq->array_len))
+			return NULL;
+
 error:
 	LOG("provisioning failed");
 	exit_handler = g_new0(struct timeout_handler, 1);
@@ -190,6 +245,9 @@ int main( int argc, char **argv )
 	LOG("provisioning main");
 
 	loop = g_main_loop_new(NULL, FALSE);
+
+	exit_handler = NULL;
+	msglist = NULL;
 
 	dbus_error_init(&err);
 	// connect to the bus and check for errors
