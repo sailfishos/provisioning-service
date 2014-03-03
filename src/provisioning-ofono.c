@@ -440,10 +440,10 @@ static void set_w2_context_property(struct modem_data *modem, struct w2 *net)
 		set_context_property(modem, modem->oi->context_path, "Name", net->name, FALSE);
 
 	if (net->username)
-		set_context_property(modem, modem->oi->context_path, "Username", net->name, FALSE);
+		set_context_property(modem, modem->oi->context_path, "Username", net->username, FALSE);
 
 	if (net->password)
-		set_context_property(modem, modem->oi->context_path, "Password", net->name, FALSE);
+		set_context_property(modem, modem->oi->context_path, "Password", net->password, FALSE);
 
 }
 
@@ -467,8 +467,8 @@ static void provisioning_w2(struct modem_data *modem, struct w2 *net)
 	LOG("provisioning_w2:%s",modem->oi->context_path);
 	LOG("provisioning_w2:%",net->apn);
 	LOG("provisioning_w2:%",net->name);
-	LOG("provisioning_internet:%",net->username);
-	LOG("provisioning_internet:%",net->password);
+	LOG("provisioning_w2:%",net->username);
+	LOG("provisioning_w2:%",net->password);
 
 	set_w2_context_property(modem,net);
 }
@@ -483,10 +483,10 @@ static void set_internet_context_property(struct modem_data *modem, struct inter
 		set_context_property(modem, modem->oi->context_path, "Name", net->name, FALSE);
 
 	if (net->username)
-		set_context_property(modem, modem->oi->context_path, "Username", net->name, FALSE);
+		set_context_property(modem, modem->oi->context_path, "Username", net->username, FALSE);
 
 	if (net->password)
-		set_context_property(modem, modem->oi->context_path, "Password", net->name, FALSE);
+		set_context_property(modem, modem->oi->context_path, "Password", net->password, FALSE);
 
 }
 
@@ -546,10 +546,10 @@ static void set_mms_context_property(struct modem_data *modem, struct w4 *mms)
 		set_context_property(modem, modem->omms->context_path, "Name", mms->name, FALSE);
 
 	if (mms->username)
-		set_context_property(modem, modem->omms->context_path, "Username", mms->name, FALSE);
+		set_context_property(modem, modem->omms->context_path, "Username", mms->username, FALSE);
 
 	if (mms->password)
-		set_context_property(modem, modem->omms->context_path, "Password", mms->name, FALSE);
+		set_context_property(modem, modem->omms->context_path, "Password", mms->password, FALSE);
 
 	if (mms->messagecenter)
 		set_context_property(modem, modem->omms->context_path, "MessageCenter", mms->messagecenter, FALSE);
