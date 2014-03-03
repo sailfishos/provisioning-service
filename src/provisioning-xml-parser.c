@@ -426,17 +426,17 @@ static void parse_w4(xmlNodePtr cur)
 				temp1 = temp->xmlChildrenNode;
 				while (temp1 != NULL) {
 
-					ctype_child = get_characteristic_type(temp);
+					ctype_child = get_characteristic_type(temp1);
 					if (!xmlStrcmp(ctype_child,(const xmlChar *)"NAPAUTHINFO")) {
 
 						child_attr = parse_attribute(temp1,(const xmlChar *)"AUTHNAME");
-						prov_data->w2->username = g_try_new0(char, strlen((char *)child_attr) + 1);
-						strcpy(prov_data->w2->username,(char *)child_attr);
+						prov_data->w4->username = g_try_new0(char, strlen((char *)child_attr) + 1);
+						strcpy(prov_data->w4->username,(char *)child_attr);
 						xmlFree(child_attr);
 
 						child_attr = parse_attribute(temp1,(const xmlChar *)"AUTHSECRET");
-						prov_data->w2->password = g_try_new0(char, strlen((char *)child_attr) + 1);
-						strcpy(prov_data->w2->password,(char *)child_attr);
+						prov_data->w4->password = g_try_new0(char, strlen((char *)child_attr) + 1);
+						strcpy(prov_data->w4->password,(char *)child_attr);
 						xmlFree(child_attr);
 					}
 					xmlFree(ctype_child);
