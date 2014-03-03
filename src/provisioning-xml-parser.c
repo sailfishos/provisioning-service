@@ -275,8 +275,8 @@ void parse_w2(xmlNodePtr cur)
 
 				temp1 = temp->xmlChildrenNode;
 				while (temp1 != NULL) {
-					ctype_child = get_characteristic_type(temp);
-					if (!xmlStrcmp(ctype,(const xmlChar *)"NAPAUTHINFO")) {
+					ctype_child = get_characteristic_type(temp1);
+					if (!xmlStrcmp(ctype_child,(const xmlChar *)"NAPAUTHINFO")) {
 
 						child_attr = parse_attribute(temp1,(const xmlChar *)"AUTHNAME");
 						prov_data->w2->username = g_try_new0(char, strlen((char *)child_attr) + 1);
