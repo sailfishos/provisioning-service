@@ -214,7 +214,15 @@ static void provisioning_cleanup(void)
 	unregister_dbus_interface(conn, PROVISIONING_SERVICE_PATH,
 					PROVISIONING_SERVICE_INTERFACE);
 }
+static gint debug_target = 0;
 
+static GOptionEntry entries[] = {
+	{ "debug", 'd', 0,G_OPTION_ARG_INT, &debug_target,
+				"Specify debug options(1 system logger 2 Standard output stream 3 Standard error output stream.", "1..3" },
+/*	{ "version", 'v', 0, G_OPTION_ARG_NONE, &option_version,
+				"Show version information and exit" },*/
+	{ NULL },
+};
 int main( int argc, char **argv )
 {
 	GOptionContext *context;
@@ -227,7 +235,7 @@ int main( int argc, char **argv )
  * If need for arguments add
  * g_option_context_add_main_entries(context, entries, NULL);
  */
-
+	g_option_context_add_main_entries(context, entries, NULL);
 	if (g_option_context_parse(context, &argc, &argv, &error) == FALSE) {
 		if (error != NULL) {
 			g_printerr("%s\n", error->message);
@@ -241,7 +249,7 @@ int main( int argc, char **argv )
 
 	g_option_context_free(context);
 
-	initlog();
+	initlog(debug_target);
 	LOG("provisioning main");
 
 	loop = g_main_loop_new(NULL, FALSE);
