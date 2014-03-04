@@ -219,10 +219,9 @@ static gint debug_target = 0;
 static GOptionEntry entries[] = {
 	{ "debug", 'd', 0,G_OPTION_ARG_INT, &debug_target,
 				"Specify debug options(1 system logger 2 Standard output stream 3 Standard error output stream.", "1..3" },
-/*	{ "version", 'v', 0, G_OPTION_ARG_NONE, &option_version,
-				"Show version information and exit" },*/
 	{ NULL },
 };
+
 int main( int argc, char **argv )
 {
 	GOptionContext *context;
