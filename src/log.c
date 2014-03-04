@@ -61,15 +61,19 @@ extern void prov_debug(const char *format, ...)
 		return;
 	
 	va_start(args, format);
-	if (logtarget == LOGJOURNAL)
+
+	switch (logtarget) {
+	case LOGJOURNAL:
 		vsyslog(log_priority, format, args);
-	else if (logtarget == LOGSTDOUT) {
+		break;
+	case LOGSTDOUT:
 		vfprintf(stdout, format , args);
 		fprintf(stdout, "\n");
-	}
-	else if (logtarget == LOGSTDERR) {
+		break;
+	case LOGSTDERR:
 		vfprintf(stderr, format, args);
 		fprintf(stderr, "\n");
+		break;
 	}
 
 	va_end(args);
