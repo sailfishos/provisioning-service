@@ -16,10 +16,12 @@
 #include "log.h"
 
 #define JOURNAL "1"
-#define STDERR "2"
+#define STDOUT "2"
+#define STDERR "3"
 #define NONE 0x00
 #define LOGJOURNAL 0x01
-#define LOGSTDERR 0x02
+#define LOGSTDOUT 0x02
+#define LOGSTDERR 0x03
 
 static int logtarget = NONE;
 static int log_priority = LOG_DEBUG;//LOG_ERR;
@@ -29,16 +31,23 @@ static int log_priority = LOG_DEBUG;//LOG_ERR;
  *
  * call "$export set PROVISIONING_SERVICE_LOG=" with a value to activate logging.
  */
-extern void initlog()
+extern void initlog(int target)
 {
 	char *logarg = NULL;
-	logarg = getenv("PROVISIONING_SERVICE_LOG");
 
-	if (logarg) {
-		if (!strcmp(logarg, JOURNAL))
-			logtarget = LOGJOURNAL;
-		else if (!strcmp(logarg, STDERR))
-			logtarget = LOGSTDERR;
+	if (target > 0)
+		logtarget = target;
+	else {
+		logarg = getenv("PROVISIONING_SERVICE_LOG");
+
+		if (logarg) {
+			if (!strcmp(logarg, JOURNAL))
+				logtarget = LOGJOURNAL;
+			else if (!strcmp(logarg, STDOUT))
+				logtarget = LOGSTDOUT;
+			else if (!strcmp(logarg, STDERR))
+				logtarget = LOGSTDERR;
+		}
 	}
 }
 
@@ -54,6 +63,10 @@ extern void prov_debug(const char *format, ...)
 	va_start(args, format);
 	if (logtarget == LOGJOURNAL)
 		vsyslog(log_priority, format, args);
+	else if (logtarget == LOGSTDOUT) {
+		vfprintf(stdout, format , args);
+		fprintf(stdout, "\n");
+	}
 	else if (logtarget == LOGSTDERR) {
 		vfprintf(stderr, format, args);
 		fprintf(stderr, "\n");
