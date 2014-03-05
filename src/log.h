@@ -24,7 +24,7 @@ extern "C" {
 #endif
 
 /* Initializes logger */
-extern void initlog();
+extern void initlog(int target);
 
 /* Prototype for log implementation function */
 extern void prov_debug(const char *format, ...);
