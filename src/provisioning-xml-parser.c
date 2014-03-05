@@ -41,13 +41,13 @@ static xmlDocPtr parse_xml_to_tree(const char *content, int length)
 	 */
 	doc = xmlReadMemory(content, length, "noname.xml", NULL, XML_PARSE_NOBLANKS);
 	if (doc == NULL) {
-		LOG("Failed to parse document\n");
+		LOG("Failed to parse document");
 		return NULL;
 		}
 	return doc;
 }
 
-xmlChar *get_characteristic_type(xmlNodePtr cur)
+static xmlChar *get_characteristic_type(xmlNodePtr cur)
 {
 	xmlChar *value;
 	value = NULL;
@@ -59,7 +59,7 @@ xmlChar *get_characteristic_type(xmlNodePtr cur)
 	return value;
 }
 
-xmlChar *parse_attribute(xmlNodePtr cur, const xmlChar *parm_name)
+static xmlChar *parse_attribute(xmlNodePtr cur, const xmlChar *parm_name)
 {
 	xmlChar *value,*name;
 
@@ -84,7 +84,7 @@ xmlChar *parse_attribute(xmlNodePtr cur, const xmlChar *parm_name)
 	return value;
 }
 
-gboolean parm_exists(xmlNodePtr cur, const xmlChar *parm_name)
+static gboolean parm_exists(xmlNodePtr cur, const xmlChar *parm_name)
 {
 
 	xmlChar * name;
@@ -112,12 +112,12 @@ gboolean parm_exists(xmlNodePtr cur, const xmlChar *parm_name)
 	return ret;
 }
 
-xmlChar *get_name(xmlNodePtr cur)
+static xmlChar *get_name(xmlNodePtr cur)
 {
 	return parse_attribute(cur,(const xmlChar *)"NAME");
 }
 
-xmlChar *get_apn(xmlNodePtr cur)
+static xmlChar *get_apn(xmlNodePtr cur)
 {
 	xmlChar *value;
 	value = parse_attribute(cur,(const xmlChar *)"NAP-ADDRTYPE");
@@ -130,16 +130,54 @@ xmlChar *get_apn(xmlNodePtr cur)
 	}
 }
 
-xmlChar *get_addr(xmlNodePtr cur)
+static xmlChar *get_addr(xmlNodePtr cur)
 {
 	return parse_attribute(cur,(const xmlChar *)"ADDR");
 }
 
-xmlChar *get_to_proxy(xmlNodePtr cur)
+static xmlChar *get_to_proxy(xmlNodePtr cur)
 {
 	return parse_attribute(cur,(const xmlChar *)"TO-PROXY");
 }
 
+static void handle_napauthinfo(xmlNodePtr temp, xmlChar *ctype, char *app_id)
+{
+	xmlChar *attr;
+	char *username, *password;
+
+	username = password = NULL;
+
+	if (!xmlStrcmp(ctype,(const xmlChar *)"NAPAUTHINFO")) {
+
+		attr = parse_attribute(temp,(const xmlChar *)"AUTHNAME");
+		username = g_try_new0(char, strlen((char *)attr) + 1);
+		strcpy(username,(char *)attr);
+		xmlFree(attr);
+
+		attr = parse_attribute(temp, (const xmlChar *)"AUTHSECRET");
+		password = g_try_new0(char, strlen((char *)attr) + 1);
+		strcpy(password,(char *)attr);
+		xmlFree(attr);
+
+		if (g_strcmp0(app_id,"w4") == 0)
+			prov_data->w4->username = username;
+		else if (g_strcmp0(app_id,"w2") == 0)
+			prov_data->w2->username = username;
+		else if (g_strcmp0(app_id,"internet") == 0)
+			prov_data->internet->username = username;
+		else
+			g_free(username);
+
+		if (g_strcmp0(app_id,"w4") == 0)
+			prov_data->w4->password = password;
+		else if (g_strcmp0(app_id,"w2") == 0)
+			prov_data->w2->password = password;
+		else if (g_strcmp0(app_id,"internet") == 0)
+			prov_data->internet->password = password;
+		else
+			g_free(password);
+	}
+}
 /*
  * Get internet access point data
  * Rudimentary solution.
@@ -148,14 +186,14 @@ xmlChar *get_to_proxy(xmlNodePtr cur)
  */
 static gboolean parse_internet(xmlNodePtr cur)
 {
-	xmlChar *name,*ctype, *ctype_child, *child_attr;
+	xmlChar *name,*ctype, *ctype_child;
 	xmlNodePtr temp, temp1;
 	gboolean ret;
 
 	name = NULL;
 	temp = cur;
 	ret = FALSE;
-	LOG("parse_internet\n");
+	LOG("parse_internet");
 	/*
 	 * Let's check first if "INTERNET" exists and if so let's use that and
 	 * forget the rest.
@@ -172,33 +210,25 @@ static gboolean parse_internet(xmlNodePtr cur)
 
 			if (parm_exists(temp, (const xmlChar *)"INTERNET")) {
 				name = get_name(temp);
-				LOG("name:%s:%d\n",name,strlen((char *)name));
-				prov_data->internet->name = g_try_new0(char, strlen((char *)name) + 1);
+				prov_data->internet->name = g_try_new0(char,
+						strlen((char *)name) + 1);
 				strcpy(prov_data->internet->name, (char*)name);
 				xmlFree(name);
 
 				name = get_apn(temp);
-				LOG("APN:%s\n",name);
-				prov_data->internet->apn = g_try_new0(char, strlen((char *)name)+1);
+				prov_data->internet->apn = g_try_new0(char,
+							strlen((char *)name)+1);
 				strcpy(prov_data->internet->apn, (char *)name);
 				xmlFree(name);
 
 				temp1 = temp->xmlChildrenNode;
 				while (temp1 != NULL) {
 
-					ctype_child = get_characteristic_type(temp);
-					if (!xmlStrcmp(ctype,(const xmlChar *)"NAPAUTHINFO")) {
+					ctype_child =
+						get_characteristic_type(temp1);
 
-						child_attr = parse_attribute(temp1,(const xmlChar *)"AUTHNAME");
-						prov_data->internet->username = g_try_new0(char, strlen((char *)child_attr) + 1);
-						strcpy(prov_data->internet->username,(char *)child_attr);
-						xmlFree(child_attr);
-
-						child_attr = parse_attribute(temp1,(const xmlChar *)"AUTHSECRET");
-						prov_data->internet->password = g_try_new0(char, strlen((char *)child_attr) + 1);
-						strcpy(prov_data->internet->password,(char *)child_attr);
-						xmlFree(child_attr);
-					}
+					handle_napauthinfo(temp1,
+							ctype_child,"internet");
 
 					xmlFree(ctype_child);
 					temp1 = temp1->next;
@@ -215,89 +245,205 @@ static gboolean parse_internet(xmlNodePtr cur)
 	return ret;
 }
 
+static void handle_application(xmlNodePtr temp, xmlChar *ctype,
+					char *ptr_to_id, char *app_id)
+{
+
+	xmlChar *attr, *name;
+
+	if (!xmlStrcmp(ctype,(const xmlChar *)"APPLICATION")) {
+
+		attr = parse_attribute(temp,(const xmlChar *)"APPID");
+
+		/*w2*/
+		if (!xmlStrcmp(attr, (const xmlChar *)"w2")  &&
+			!xmlStrcmp(attr, (const xmlChar *)app_id)) {
+			name = parse_attribute(temp,
+						(const xmlChar *)"TO-NAPID");
+			strcpy(ptr_to_id, (char *)name);
+			xmlFree(name);
+		}
+		/*w4*/
+		if (!xmlStrcmp(attr,(const xmlChar *)"w4") &&
+			!xmlStrcmp(attr,(const xmlChar *)app_id)) {
+
+			name = get_addr(temp);
+			prov_data->w4->messagecenter =
+				g_try_new0(char, strlen((char *)name) + 1);
+			strcpy(prov_data->w4->messagecenter, (char*)name);
+			xmlFree(name);
+
+			name = get_to_proxy(temp);
+			strcpy(ptr_to_id, (char *)name);
+			xmlFree(name);
+		}
+		xmlFree(attr);
+	}
+}
+
+static void handle_napdef(xmlNodePtr temp, xmlChar *ctype,
+					char *ptr_to_nap_id, char *app_id)
+{
+	xmlChar *attr, *child_attr, *ctype_child;
+	xmlNodePtr temp1;
+	char *apn, *name;
+
+	apn = name = NULL;
+
+	if (!xmlStrcmp(ctype,(const xmlChar *)"NAPDEF")) {
+
+		attr = parse_attribute(temp,(const xmlChar *)"NAPID");
+		if (!xmlStrcmp(attr,(const xmlChar *)ptr_to_nap_id)) {
+
+			child_attr = get_apn(temp);
+			apn = g_try_new0(char, strlen((char *)child_attr) + 1);
+			strcpy(apn, (char*)child_attr);
+			xmlFree(child_attr);
+
+			child_attr = get_name(temp);
+			name = g_try_new0(char, strlen((char *)child_attr) + 1);
+			strcpy(name, (char*)child_attr);
+			xmlFree(child_attr);
+
+			temp1 = temp->xmlChildrenNode;
+			while (temp1 != NULL) {
+
+				ctype_child = get_characteristic_type(temp1);
+				handle_napauthinfo(temp1, ctype_child, app_id);
+
+				xmlFree(ctype_child);
+				temp1 = temp1->next;
+			}
+
+			if (g_strcmp0(app_id,"w4") == 0)
+				prov_data->w4->apn = apn;
+			else if (g_strcmp0(app_id,"w2") == 0)
+				prov_data->w2->apn = apn;
+			else
+				g_free(apn);
+
+			if (g_strcmp0(app_id,"w4") == 0)
+				prov_data->w4->name = name;
+			else if (g_strcmp0(app_id,"w2") == 0)
+				prov_data->w2->name = name;
+			else
+				g_free(name);
+		}
+		xmlFree(attr);
+	}
+
+}
 /*
  * Get w2 data
  * Rudimentary solution.
  * Properly done this would parse all the attributes to a list of w2 structures
  * and then decide what to do.
  */
-void parse_w2(xmlNodePtr cur)
+static void parse_w2(xmlNodePtr cur)
 {
-	xmlChar *ctype,*ctype_child,*attr,*child_attr;
-	xmlNodePtr temp, temp1;
+	xmlChar *ctype;
+	xmlNodePtr temp;
 	/*as stated in Provisioning Content 1.1*/
 	char to_nap_id[16]= ""; //make dynamic
 	char *ptr_to_nap_id;
 
-	temp = cur;
 	ptr_to_nap_id = to_nap_id;
-	LOG("parse_w2\n");
+	LOG("parse_w2");
 
 	temp = cur;
 	while (temp != NULL) {
 
 		ctype = get_characteristic_type(temp);
-		if (!xmlStrcmp(ctype,(const xmlChar *)"APPLICATION")) {
 
-			attr = parse_attribute(temp,(const xmlChar *)"APPID");
-			if (!xmlStrcmp(attr, (const xmlChar *)"w2")) {
-				child_attr = parse_attribute(temp,(const xmlChar *)"TO-NAPID");
-				strcpy(ptr_to_nap_id, (char *)child_attr);
-				xmlFree(child_attr);
-			}
-
-			xmlFree(attr);
-		}
+		handle_application(temp, ctype, ptr_to_nap_id, "w2");
 
 		xmlFree(ctype);
 		temp = temp->next;
 	}
 
-	temp = cur;
 
+	temp = cur;
+		/*get matching apn*/
 	while (temp != NULL) {
 
 		ctype = get_characteristic_type(temp);
-		if (!xmlStrcmp(ctype,(const xmlChar *)"NAPDEF")) {
 
-			attr = parse_attribute(temp,(const xmlChar *)"NAPID");
-			if (!xmlStrcmp(attr,(const xmlChar *)ptr_to_nap_id)) {
+		handle_napdef(temp, ctype, ptr_to_nap_id, "w2");
 
-				child_attr = get_apn(temp);
-				prov_data->w2->apn = g_try_new0(char, strlen((char *)child_attr) + 1);
-				strcpy(prov_data->w2->apn, (char*)child_attr);
-				xmlFree(child_attr);
-
-				child_attr = get_name(temp);
-				prov_data->w2->name = g_try_new0(char, strlen((char *)child_attr) + 1);
-				strcpy(prov_data->w2->name, (char*)child_attr);
-				xmlFree(child_attr);
-
-				temp1 = temp->xmlChildrenNode;
-				while (temp1 != NULL) {
-					ctype_child = get_characteristic_type(temp1);
-					if (!xmlStrcmp(ctype_child,(const xmlChar *)"NAPAUTHINFO")) {
-
-						child_attr = parse_attribute(temp1,(const xmlChar *)"AUTHNAME");
-						prov_data->w2->username = g_try_new0(char, strlen((char *)child_attr) + 1);
-						strcpy(prov_data->w2->username,(char *)child_attr);
-						xmlFree(child_attr);
-
-						child_attr = parse_attribute(temp1,(const xmlChar *)"AUTHSECRET");
-						prov_data->w2->password = g_try_new0(char, strlen((char *)child_attr) + 1);
-						strcpy(prov_data->w2->password,(char *)child_attr);
-						xmlFree(child_attr);
-					}
-					xmlFree(ctype_child);
-					temp1 = temp1->next;
-				}
-			}
-			xmlFree(attr);
-		}
 		xmlFree(ctype);
 		temp = temp->next;
 	}
 
+}
+
+static void handle_w4_port(xmlNodePtr temp, xmlChar *ctype)
+{
+	xmlChar *attr;
+
+	if (!xmlStrcmp(ctype,(const xmlChar *)"PORT")) {
+		attr = parse_attribute(temp,(const xmlChar *)"PORTNBR");
+
+		prov_data->w4->portnro =
+				g_try_new0(char, strlen((char *)attr) +1);
+		strcpy(prov_data->w4->portnro, (char*)attr);
+		xmlFree(attr);
+	}
+}
+static void handle_w4_pxphysical(xmlNodePtr temp, xmlChar *ctype,
+							char *ptr_to_nap_id)
+{
+
+	xmlNodePtr temp1;
+	xmlChar *ctype_child, *attr;
+
+	if (!xmlStrcmp(ctype,(const xmlChar *)"PXPHYSICAL")) {
+
+		/*get proxy*/
+		attr = parse_attribute(temp,(const xmlChar *)"PXADDR");
+		prov_data->w4->messageproxy = g_try_new0(char,
+						strlen((char *)attr) + 1);
+		strcpy(prov_data->w4->messageproxy, (char*)attr);
+		xmlFree(attr);
+
+		attr = parse_attribute(temp,(const xmlChar *)"TO-NAPID");
+		strcpy(ptr_to_nap_id, (char *)attr);
+
+		xmlFree(attr);
+
+		temp1 = temp->xmlChildrenNode;
+		/*get portnbr*/
+		while (temp1 != NULL) {
+
+			ctype_child = get_characteristic_type(temp1);
+			handle_w4_port(temp1, ctype_child);
+			xmlFree(ctype_child);
+			temp1 = temp1->next;
+		}
+	}
+}
+
+static void handle_w4_pxlogical(xmlNodePtr temp, xmlChar *ctype,
+					char *ptr_to_proxy, char *ptr_to_nap_id)
+{
+	xmlChar *attr, *ctype_child;
+	xmlNodePtr temp1;
+
+	if (!xmlStrcmp(ctype,(const xmlChar *)"PXLOGICAL")) {
+
+		attr = parse_attribute(temp,(const xmlChar *)"PROXY-ID");
+		if (!xmlStrcmp(attr,(const xmlChar *)ptr_to_proxy)) {
+
+			temp1 = temp->xmlChildrenNode;
+			while (temp1 != NULL) {
+				ctype_child = get_characteristic_type(temp1);
+				handle_w4_pxphysical(temp1, ctype_child,
+								ptr_to_nap_id);
+				xmlFree(ctype_child);
+				temp1 = temp1->next;
+			}
+		}
+		xmlFree(attr);
+	}
 }
 
 /*
@@ -308,16 +454,16 @@ void parse_w2(xmlNodePtr cur)
  */
 static void parse_w4(xmlNodePtr cur)
 {
-	xmlChar *name,*ctype,*ctype_child,*ctype2,*ctype3,*attr,*child_attr;
+	xmlChar *ctype;
 /*as stated in Provisioning Content 1.1 NOTE! if ipv6 then should be 45*/
 	char to_proxy[32] = ""; //make dynamic
 /*as stated in Provisioning Content 1.1*/
 	char to_nap_id[16]= ""; //make dynamic
 	char *ptr_to_proxy,*ptr_to_nap_id;
-	xmlNodePtr temp,temp1,temp2;
+	xmlNodePtr temp;
 
-	name = NULL;
 	temp = cur;
+
 	LOG("parse_w4");
 	ptr_to_proxy = to_proxy;
 	ptr_to_nap_id = to_nap_id;
@@ -326,23 +472,9 @@ static void parse_w4(xmlNodePtr cur)
 	while (temp != NULL) {
 
 		ctype = get_characteristic_type(temp);
-		if (!xmlStrcmp(ctype,(const xmlChar *)"APPLICATION")) {
 
-			attr = parse_attribute(temp,(const xmlChar *)"APPID");
-			if (!xmlStrcmp(attr,(const xmlChar *)"w4")) {
+		handle_application(temp, ctype, ptr_to_proxy, "w4");
 
-				name = get_addr(temp);
-				LOG("MessageCenter:%s:%d\n",name,strlen((char *)name));
-				prov_data->w4->messagecenter = g_try_new0(char, strlen((char *)name) + 1);
-				strcpy(prov_data->w4->messagecenter, (char*)name);
-				xmlFree(name);
-
-				name = get_to_proxy(temp);
-				strcpy(ptr_to_proxy, (char *)name);
-				xmlFree(name);
-			}
-			xmlFree(attr);
-		}
 		xmlFree(ctype);
 		temp = temp->next;
 	}
@@ -353,52 +485,9 @@ static void parse_w4(xmlNodePtr cur)
 	while (temp != NULL) {
 
 		ctype = get_characteristic_type(temp);
-		if (!xmlStrcmp(ctype,(const xmlChar *)"PXLOGICAL")) {
 
-			attr = parse_attribute(temp,(const xmlChar *)"PROXY-ID");
-			if (!xmlStrcmp(attr,(const xmlChar *)ptr_to_proxy)) {
+		handle_w4_pxlogical(temp, ctype, ptr_to_proxy, ptr_to_nap_id);
 
-				temp1 = temp->xmlChildrenNode;
-				while (temp1 != NULL) {
-					ctype2 = get_characteristic_type(temp1);
-					if (!xmlStrcmp(ctype2,(const xmlChar *)"PXPHYSICAL")) {
-
-					/*get proxy*/
-						child_attr = parse_attribute(temp1,(const xmlChar *)"PXADDR");
-						LOG("MessageProxy:%s:%d\n",child_attr,strlen((char *)child_attr));
-						prov_data->w4->messageproxy = g_try_new0(char, strlen((char *)child_attr) + 1);
-						strcpy(prov_data->w4->messageproxy, (char*)child_attr);
-						LOG("prov_data->w4->messageproxy:%s",prov_data->w4->messageproxy);
-						xmlFree(child_attr);
-
-						child_attr = parse_attribute(temp1,(const xmlChar *)"TO-NAPID");
-						strcpy(ptr_to_nap_id, (char *)child_attr);
-						LOG("to_nap_id:%s",child_attr);
-						xmlFree(child_attr);
-
-						temp2 = temp1->xmlChildrenNode;
-					/*get portnbr*/
-						while (temp2 != NULL) {
-
-							ctype3 = get_characteristic_type(temp2);
-							if (!xmlStrcmp(ctype3,(const xmlChar *)"PORT")) {
-								child_attr = parse_attribute(temp2,(const xmlChar *)"PORTNBR");
-								LOG("PortNro:%s:%d\n",child_attr,strlen((char *)child_attr));
-								prov_data->w4->portnro = g_try_new0(char, strlen((char *)child_attr) + 1);
-								strcpy(prov_data->w4->portnro, (char*)child_attr);
-								LOG("prov_data->w4->portnro:%s",prov_data->w4->portnro);
-								xmlFree(child_attr);
-							}
-							xmlFree(ctype3);
-							temp2 = temp2->next;
-						}
-					}
-					xmlFree(ctype2);
-					temp1 = temp1->next;
-				}
-			}
-			xmlFree(attr);
-		}
 		xmlFree(ctype);
 		temp = temp->next;
 	}
@@ -408,43 +497,9 @@ static void parse_w4(xmlNodePtr cur)
 	while (temp != NULL) {
 
 		ctype = get_characteristic_type(temp);
-		if (!xmlStrcmp(ctype,(const xmlChar *)"NAPDEF")) {
 
-			attr = parse_attribute(temp,(const xmlChar *)"NAPID");
-			if (!xmlStrcmp(attr,(const xmlChar *)ptr_to_nap_id)) {
+		handle_napdef(temp, ctype, ptr_to_nap_id, "w4");
 
-				child_attr = get_apn(temp);
-				prov_data->w4->apn = g_try_new0(char, strlen((char *)child_attr) + 1);
-				strcpy(prov_data->w4->apn, (char*)child_attr);
-				xmlFree(child_attr);
-
-				child_attr = get_name(temp);
-				prov_data->w4->name = g_try_new0(char, strlen((char *)child_attr) + 1);
-				strcpy(prov_data->w4->name, (char*)child_attr);
-				xmlFree(child_attr);
-
-				temp1 = temp->xmlChildrenNode;
-				while (temp1 != NULL) {
-
-					ctype_child = get_characteristic_type(temp1);
-					if (!xmlStrcmp(ctype_child,(const xmlChar *)"NAPAUTHINFO")) {
-
-						child_attr = parse_attribute(temp1,(const xmlChar *)"AUTHNAME");
-						prov_data->w4->username = g_try_new0(char, strlen((char *)child_attr) + 1);
-						strcpy(prov_data->w4->username,(char *)child_attr);
-						xmlFree(child_attr);
-
-						child_attr = parse_attribute(temp1,(const xmlChar *)"AUTHSECRET");
-						prov_data->w4->password = g_try_new0(char, strlen((char *)child_attr) + 1);
-						strcpy(prov_data->w4->password,(char *)child_attr);
-						xmlFree(child_attr);
-					}
-					xmlFree(ctype_child);
-					temp1 = temp1->next;
-				}
-			}
-			xmlFree(attr);
-		}
 		xmlFree(ctype);
 		temp = temp->next;
 	}
@@ -563,7 +618,7 @@ int parse_xml_main(const char *document,int length)
 	xmlDocPtr doc;
 	xmlNodePtr cur;
 
-	LOG("enter parse_xml_main\n");
+	LOG("enter parse_xml_main");
 
 	if(!init_provisioning_data())
 		return 0;
@@ -572,14 +627,14 @@ int parse_xml_main(const char *document,int length)
 
 	cur = xmlDocGetRootElement(doc);
 	if (cur == NULL) {
-		LOG("empty document\n");
+		LOG("empty document");
 		xmlFreeDoc(doc);
 		return 0;
 	}
 
 	/*check document type*/
 	if (xmlStrcmp(cur->name, (const xmlChar *) "wap-provisioningdoc")) {
-		LOG("document of the wrong type, root node != wap-provisioningdoc");
+		LOG("root node != wap-provisioningdoc");
 		xmlFreeDoc(doc);
 		return 0;
 	}
@@ -599,6 +654,6 @@ int parse_xml_main(const char *document,int length)
 	xmlFreeDoc(doc);
 	xmlCleanupParser();
 
-	LOG("exit parse_xml_main\n");
+	LOG("exit parse_xml_main");
 	return 1;
 }
