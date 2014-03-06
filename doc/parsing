@@ -1,0 +1,35 @@
+The xml tree is assumed to be of the following form:
+
+APPLICATION
+-APPID
+-ADDR
+-TO-PROXY
+-TO-NAPID
+PXLOGICAL
+-PROXY-ID
+-PXPHYSICAL
+--PXADDR
+--TO-NAPID
+--PORT
+---PORTNBR
+NAPDEF
+-NAME
+-NAP-ADDRTYPE
+-NAP-ADDRESS
+-INTERNET
+-NAPAUTHINFO
+--AUTHNAME
+--AUTHSECRET
+
+The xml parser first checks if one of the NAPDEF nodes holds property INTERNET
+and if so then parses that nodes properties to create structure internet.
+If no property INTERNET found it checks APPLICATION nodes for property APPID
+that has value w2 to find TO-NAPID property which it uses to find matching
+NAPDEF node of which properties it uses to create structure w2.
+
+Then the parser checks APPLICATION nodes for property APPID that has value w4 to
+find a: property ADDR to be saved in structure w4 b: TO-PROXY property which it
+uses to find matching PXLOGICAL node of which it uses subnode PXPHYSICAL to get
+a: PXADDR b: PORTNBR from subnode PORT c: TO-NAPID property which it uses to
+find matching NAPDEF node of which properties it uses to create the rest of
+structure w4.
