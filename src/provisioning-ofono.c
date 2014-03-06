@@ -116,21 +116,20 @@ static void set_context_property_reply(DBusPendingCall *call, void *user_data)
 	dbus_error_init(&err);
 
 	if (dbus_set_error_from_message(&err, reply) == TRUE) {
-		LOG("set_context_property_reply:%s: %s\n",
+		LOG("set_context_property_reply:%s: %s",
 			err.name, err.message);
 		dbus_error_free(&err);
 	}
 
 	dbus_message_unref(reply);
 
-	/*This could perhaps be done more elegantly but will do for now*/
+	/*TODO: This could perhaps be done more elegantly but will do for now*/
 	call_counter--;
 	LOG("%d",call_counter);
-//	if (call_counter == 0)
-//		clean_provisioning();
 }
 
-static void deactivate_internet_context_reply(DBusPendingCall *call, void *user_data)
+static void deactivate_internet_context_reply(DBusPendingCall *call,
+								void *user_data)
 {
 	DBusMessage *reply = dbus_pending_call_steal_reply(call);
 	DBusError err;
@@ -140,7 +139,7 @@ static void deactivate_internet_context_reply(DBusPendingCall *call, void *user_
 	dbus_error_init(&err);
 
 	if (dbus_set_error_from_message(&err, reply) == TRUE) {
-		LOG("deactivate_internet_context_reply:%s: %s\n",
+		LOG("deactivate_internet_context_reply:%s: %s",
 			err.name, err.message);
 		dbus_error_free(&err);
 		dbus_message_unref(reply);
@@ -150,6 +149,11 @@ static void deactivate_internet_context_reply(DBusPendingCall *call, void *user_
 	dbus_message_unref(reply);
 
 	prov_data = get_provisioning_data();
+	if (prov_data == NULL) {
+		LOG("No provisioning data");
+		clean_provisioning();
+		return;
+	}
 	if (!prov_data->internet->apn && !prov_data->internet->apn) {
 		LOG("No data to provisioning");
 		clean_provisioning();
@@ -165,11 +169,9 @@ static void deactivate_internet_context_reply(DBusPendingCall *call, void *user_
 		provisioning_w2(modem,prov_data->w2);
 
 exit:
-	/*This could perhaps be done more elegantly but will do for now*/
+	/*TODO: This could perhaps be done more elegantly but will do for now*/
 	call_counter--;
 	LOG("%d",call_counter);
-//	if (call_counter == 0)
-//		clean_provisioning();
 }
 
 static void deactivate_mms_context_reply(DBusPendingCall *call, void *user_data)
@@ -182,7 +184,7 @@ static void deactivate_mms_context_reply(DBusPendingCall *call, void *user_data)
 	dbus_error_init(&err);
 
 	if (dbus_set_error_from_message(&err, reply) == TRUE) {
-		LOG("deactivate_mms_context_reply:%s: %s\n",
+		LOG("deactivate_mms_context_reply:%s: %s",
 			err.name, err.message);
 		dbus_error_free(&err);
 		dbus_message_unref(reply);
@@ -192,6 +194,11 @@ static void deactivate_mms_context_reply(DBusPendingCall *call, void *user_data)
 	dbus_message_unref(reply);
 
 	prov_data = get_provisioning_data();
+	if (prov_data == NULL) {
+		LOG("No provisioning data");
+		clean_provisioning();
+		return;
+	}
 	if (!prov_data->internet->apn && !prov_data->w4->apn) {
 		LOG("No data to provisioning");
 		clean_provisioning();
@@ -204,15 +211,14 @@ static void deactivate_mms_context_reply(DBusPendingCall *call, void *user_data)
 		provisioning_mms(modem,prov_data->w4);
 
 exit:
-	/*This could perhaps be done more elegantly but will do for now*/
+	/*TODO: This could perhaps be done more elegantly but will do for now*/
 	call_counter--;
 	LOG("%d",call_counter);
-//	if (call_counter == 0)
-//		clean_provisioning();
 }
 
 static int set_context_property(struct modem_data *modem, const char *path,
-				const char *property, const char *value, gboolean active)
+				const char *property, const char *value,
+								gboolean active)
 {
 	DBusConnection *conn = modem->conn;
 	DBusMessage *msg;
@@ -289,7 +295,7 @@ static void add_mms_context_reply(DBusPendingCall *call, void *user_data)
 	dbus_error_init(&err);
 
 	if (dbus_set_error_from_message(&err, reply) == TRUE) {
-		LOG("add_mms_context_reply:%s: %s\n",
+		LOG("add_mms_context_reply:%s: %s",
 			err.name, err.message);
 		dbus_error_free(&err);
 	}
@@ -304,17 +310,20 @@ static void add_mms_context_reply(DBusPendingCall *call, void *user_data)
 	modem->omms->context_active = FALSE;
 
 	prov_data = get_provisioning_data();
+	if (prov_data == NULL) {
+		LOG("No provisioning data");
+		clean_provisioning();
+		return;
+	}
 	if (prov_data->w4->apn)
 		provisioning_mms(modem,prov_data->w4);
 
 exit:
 	dbus_message_unref(reply);
 
-	/*This could perhaps be done more elegantly but will do for now*/
+	/*TODO: This could perhaps be done more elegantly but will do for now*/
 	call_counter--;
 	LOG("%d",call_counter);
-//	if (call_counter == 0)
-//		clean_provisioning();
 }
 
 static void add_internet_context_reply(DBusPendingCall *call, void *user_data)
@@ -329,7 +338,7 @@ static void add_internet_context_reply(DBusPendingCall *call, void *user_data)
 	dbus_error_init(&err);
 
 	if (dbus_set_error_from_message(&err, reply) == TRUE) {
-		LOG("add_internet_context_reply:%s: %s\n",
+		LOG("add_internet_context_reply:%s: %s",
 			err.name, err.message);
 		dbus_error_free(&err);
 	}
@@ -345,6 +354,11 @@ static void add_internet_context_reply(DBusPendingCall *call, void *user_data)
 	modem->oi->context_active = FALSE;
 
 	prov_data = get_provisioning_data();
+	if (prov_data == NULL) {
+		LOG("No provisioning data");
+		clean_provisioning();
+		return;
+	}
 	if (prov_data->internet->apn)
 		provisioning_internet(modem,prov_data->internet);
 
@@ -354,12 +368,9 @@ static void add_internet_context_reply(DBusPendingCall *call, void *user_data)
 exit:
 	dbus_message_unref(reply);
 
-	/*This could perhaps be done more elegantly but will do for now*/
+	/*TODO: This could perhaps be done more elegantly but will do for now*/
 	call_counter--;
 	LOG("%d",call_counter);
-//	if (call_counter == 0)
-//		clean_provisioning();
-
 }
 
 static int add_context(struct modem_data *modem, const char *type)
@@ -373,7 +384,6 @@ static int add_context(struct modem_data *modem, const char *type)
 	msg = dbus_message_new_method_call(OFONO_SERVICE, modem->path,
 					OFONO_GPRS_INTERFACE, "AddContext");
 
-	LOG("add_context");
 	if (msg == NULL)
 		return -ENOMEM;
 
@@ -414,6 +424,11 @@ static gboolean create_contexts(struct modem_data *modem)
 	prov_data = get_provisioning_data();
 	ret1 = ret2 = 0;
 
+	if (prov_data == NULL) {
+		LOG("No provisioning data");
+		clean_provisioning();
+		return;
+	}
 	if (prov_data->internet->apn || prov_data->w2->apn)
 		ret1 = create_context(modem, "internet");
 
@@ -434,16 +449,20 @@ static int deactivate_context(struct modem_data *modem, const char *path)
 static void set_w2_context_property(struct modem_data *modem, struct w2 *net)
 {
 	if (net->apn)
-		set_context_property(modem, modem->oi->context_path, "AccessPointName", net->apn, FALSE);
+		set_context_property(modem, modem->oi->context_path,
+					"AccessPointName", net->apn, FALSE);
 
 	if (net->name)
-		set_context_property(modem, modem->oi->context_path, "Name", net->name, FALSE);
+		set_context_property(modem, modem->oi->context_path,
+						"Name", net->name, FALSE);
 
 	if (net->username)
-		set_context_property(modem, modem->oi->context_path, "Username", net->username, FALSE);
+		set_context_property(modem, modem->oi->context_path,
+					"Username", net->username, FALSE);
 
 	if (net->password)
-		set_context_property(modem, modem->oi->context_path, "Password", net->password, FALSE);
+		set_context_property(modem, modem->oi->context_path,
+					"Password", net->password, FALSE);
 
 }
 
@@ -474,23 +493,29 @@ static void provisioning_w2(struct modem_data *modem, struct w2 *net)
 }
 
 
-static void set_internet_context_property(struct modem_data *modem, struct internet *net)
+static void set_internet_context_property(struct modem_data *modem,
+							struct internet *net)
 {
 	if (net->apn)
-		set_context_property(modem, modem->oi->context_path, "AccessPointName", net->apn, FALSE);
+		set_context_property(modem, modem->oi->context_path,
+					"AccessPointName", net->apn, FALSE);
 
 	if (net->name)
-		set_context_property(modem, modem->oi->context_path, "Name", net->name, FALSE);
+		set_context_property(modem, modem->oi->context_path,
+					"Name", net->name, FALSE);
 
 	if (net->username)
-		set_context_property(modem, modem->oi->context_path, "Username", net->username, FALSE);
+		set_context_property(modem, modem->oi->context_path,
+					"Username", net->username, FALSE);
 
 	if (net->password)
-		set_context_property(modem, modem->oi->context_path, "Password", net->password, FALSE);
+		set_context_property(modem, modem->oi->context_path,
+					"Password", net->password, FALSE);
 
 }
 
-static void provisioning_internet(struct modem_data *modem, struct internet *net)
+static void provisioning_internet(struct modem_data *modem,
+							struct internet *net)
 {
 
 	LOG("provisioning_internet");
@@ -508,10 +533,10 @@ static void provisioning_internet(struct modem_data *modem, struct internet *net
 	}
 
 	LOG("provisioning_internet:%s",modem->oi->context_path);
-	LOG("provisioning_internet:%",net->apn);
-	LOG("provisioning_internet:%",net->name);
-	LOG("provisioning_internet:%",net->username);
-	LOG("provisioning_internet:%",net->password);
+	LOG("provisioning_internet:%s",net->apn);
+	LOG("provisioning_internet:%s",net->name);
+	LOG("provisioning_internet:%s",net->username);
+	LOG("provisioning_internet:%s",net->password);
 
 	set_internet_context_property(modem,net);
 }
@@ -540,23 +565,30 @@ static void set_mms_context_property(struct modem_data *modem, struct w4 *mms)
 	char *mms_proxy;
 
 	if (mms->apn)
-		set_context_property(modem, modem->omms->context_path, "AccessPointName", mms->apn, FALSE);
+		set_context_property(modem, modem->omms->context_path,
+					"AccessPointName", mms->apn, FALSE);
 
 	if (mms->name)
-		set_context_property(modem, modem->omms->context_path, "Name", mms->name, FALSE);
+		set_context_property(modem, modem->omms->context_path,
+					"Name", mms->name, FALSE);
 
 	if (mms->username)
-		set_context_property(modem, modem->omms->context_path, "Username", mms->username, FALSE);
+		set_context_property(modem, modem->omms->context_path,
+					"Username", mms->username, FALSE);
 
 	if (mms->password)
-		set_context_property(modem, modem->omms->context_path, "Password", mms->password, FALSE);
+		set_context_property(modem, modem->omms->context_path,
+					"Password", mms->password, FALSE);
 
 	if (mms->messagecenter)
-		set_context_property(modem, modem->omms->context_path, "MessageCenter", mms->messagecenter, FALSE);
+		set_context_property(modem, modem->omms->context_path,
+					"MessageCenter", mms->messagecenter,
+									FALSE);
 
 	mms_proxy = create_mms_proxy(mms);
 	if (mms_proxy)
-		set_context_property(modem, modem->omms->context_path, "MessageProxy", mms_proxy, FALSE);
+		set_context_property(modem, modem->omms->context_path,
+					"MessageProxy", mms_proxy, FALSE);
 
 	g_free(mms_proxy);
 
@@ -594,7 +626,13 @@ static gboolean set_provisioning(struct modem_data *modem)
 	LOG("set_provisioning");
 
 	prov_data = get_provisioning_data();
-	if (!prov_data->internet->apn && !prov_data->w4->apn && !prov_data->w2->apn) {
+	if (prov_data == NULL) {
+		LOG("No provisioning data");
+		return FALSE;
+	}
+
+	if (!prov_data->internet->apn && !prov_data->w4->apn
+					&& !prov_data->w2->apn) {
 		LOG("No provisioning data");
 		return FALSE;
 	}
@@ -728,7 +766,7 @@ static void get_contexts_reply(DBusPendingCall *call, void *user_data)
 	LOG("get_contexts_reply");
 
 	if (dbus_set_error_from_message(&err, reply) == TRUE) {
-		LOG("get_contexts_reply:%s: %s\n",
+		LOG("get_contexts_reply:%s: %s",
 			err.name, err.message);
 		dbus_error_free(&err);
 		goto done;
@@ -817,7 +855,7 @@ static void get_gprs_properties_reply(DBusPendingCall *call, void *user_data)
 	dbus_error_init(&err);
 
 	if (dbus_set_error_from_message(&err, reply) == TRUE) {
-		LOG("get_gprs_properties_reply:%s: %s\n",
+		LOG("get_gprs_properties_reply:%s: %s",
 			err.name, err.message);
 		dbus_error_free(&err);
 		goto done;
@@ -908,7 +946,7 @@ static void check_interfaces(struct modem_data *modem, DBusMessageIter *iter)
 		dbus_message_iter_next(&entry);
 	}
 
-/* If no gprs should we wait a while and re-try once? */
+	/*TODO: If no gprs should we wait a while and re-try once? */
 	if (has_gprs) {
 		if (get_gprs_properties(modem) < 0)
 			clean_provisioning();
@@ -920,26 +958,27 @@ static void remove_modem()
 {
 	struct modem_data *modem = ofono_modem;
 
-	LOG("path %s", modem->path);
+	LOG("remove_modem");
+	if (modem != NULL) {
+		dbus_connection_unref(modem->conn);
 
-	dbus_connection_unref(modem->conn);
+		g_free(modem->temp->context_path);
+		g_free(modem->temp->type);
+		g_free(modem->temp);
 
-	g_free(modem->temp->context_path);
-	g_free(modem->temp->type);
-	g_free(modem->temp);
+		g_free(modem->oi->context_path);
+		g_free(modem->oi);
 
-	g_free(modem->oi->context_path);
-	g_free(modem->oi);
+		g_free(modem->omms->context_path);
+		g_free(modem->omms);
 
-	g_free(modem->omms->context_path);
-	g_free(modem->omms);
-
-	g_free(modem->path);
-	g_free(modem);
+		g_free(modem->path);
+		g_free(modem);
+	}
 }
 
-static void create_modem(DBusConnection *conn,
-				const char *path, DBusMessageIter *iter)
+static void create_modem(DBusConnection *conn, const char *path,
+							DBusMessageIter *iter)
 {
 	struct modem_data *modem;
 	struct ofono_internet *oi;
@@ -1025,7 +1064,7 @@ static void get_modems_reply(DBusPendingCall *call, void *user_data)
 	dbus_error_init(&err);
 
 	if (dbus_set_error_from_message(&err, reply) == TRUE) {
-		LOG("get_modems_reply:%s: %s\n",
+		LOG("get_modems_reply:%s: %s",
 			err.name, err.message);
 		dbus_error_free(&err);
 		goto done;
@@ -1103,6 +1142,7 @@ int provisioning_init_ofono(void)
 	call_counter = 0;
 	idle_id = 0;
 	ret = 0;
+	ofono_modem = NULL;
 
 	connection = setup_dbus_bus(DBUS_BUS_SYSTEM, NULL, NULL);
 	if (connection == NULL) {
