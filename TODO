@@ -1,58 +1,25 @@
 Fix main.c provisioning_handle_message:
--to handle multiple requests.
 -move xml parsing call from provisioning-decoder Provisioning_decodeWBXML to
-provisioning_handle_message.
+ provisioning_handle_message. (Current way might actually be the right way)
 
 Re-think main.c and provisioning-receiver:
 -perhaps main should only handle creation and destruction.
--provisioning-receiver receiving of the message and further processing i.e. sending
-wbxml to decoder etc.
+-provisioning-receiver receiving of the message and further processing i.e.
+ sending wbxml to decoder etc.
 -have separate dbus handler i.e. the one that creates dbus interface etc when
-told by main and forwards received dbus messages to receiver.
+ told by main and forwards received dbus messages to receiver.
 
 provisioning-ofono:
--clean up not very well done
-
-Parse functions look ugly fix them(see parse_w4 1st while get_addr for example)
+-clean up might not be done properly
 
 fix provisioning-xml-parser:
--to parse according to elements/nodes e.g.
-APPLICATION
--APPID
--NAME
--ADDR
--TO-PROXY
-PXLOGICAL
--PROXY-ID
--PXPHYSICAL
---PXADDR
---PORT
----PORTNBR
-NAPDEF
--NAME
--INTERNET
+-to parse according to elements/nodes.
 
-NOTE! above is how it's doing it now so not perhaps the correct way but idea
-would be to parse according to main branches i.e. APPLICATION, PXLOGICAL,
-NAPDEF first and possibly(most likely) have a list ofeach item then link
+Idea would be to parse according to main branches i.e. APPLICATION, PXLOGICAL,
+NAPDEF first and possibly(most likely) have a list of each item then link
 correct branches to each other and then create w2/w4 structures.
-
-Explain parsing logic somewhere:
-e.g. the structure of the tree parsing could be like this i.e. PORT is searched
-from multiple places.
-
-APPLICATION
--APPADDR
---PORT
--APPAUTH
--RESOURCE
-BOOTSTRAP
-PXLOGICAL
--PORT
--PXPHYSICAL
---PORT
-NAPDEF
--NAPAUTHINFO
+NOTE: current solution doesn't handle having several w2 APPLICATIONS and would
+actually use the one found last.
 
 open item:
 -Not sure but PORT might be also under PXLOGICAL
@@ -75,5 +42,9 @@ dependency.
 or does it parse each query separately i.e. would it actually be more efficient
 than the current way?
 
-Fix logging to start using parameter i.e. running with -d would enable logging.
+-reactivate deactivated context.
 
+-Are all the policies really needed in provisioning.conf?
+
+-Change writing receved wbxml and parsed xml file writing activation more
+ dynamic. I.e. build or run time configurable.
