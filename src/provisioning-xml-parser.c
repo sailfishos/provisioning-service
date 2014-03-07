@@ -471,6 +471,7 @@ static void handle_w4_pxlogical(xmlNodePtr temp, xmlChar *ctype,
 		xmlFree(attr);
 		return;
 	}
+
 	LOG("handle_w4_pxlogical");
 	temp1 = temp->xmlChildrenNode;
 	while (temp1 != NULL) {

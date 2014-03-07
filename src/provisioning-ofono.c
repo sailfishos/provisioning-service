@@ -532,11 +532,11 @@ static void provisioning_internet(struct modem_data *modem,
 		return;
 	}
 
-	LOG("provisioning_internet:%s",modem->oi->context_path);
-	LOG("provisioning_internet:%s",net->apn);
-	LOG("provisioning_internet:%s",net->name);
-	LOG("provisioning_internet:%s",net->username);
-	LOG("provisioning_internet:%s",net->password);
+	LOG("provisioning_internet:%s", modem->oi->context_path);
+	LOG("provisioning_internet:%s", net->apn);
+	LOG("provisioning_internet:%s", net->name);
+	LOG("provisioning_internet:%s", net->username);
+	LOG("provisioning_internet:%s", net->password);
 
 	set_internet_context_property(modem,net);
 }
@@ -958,8 +958,8 @@ static void remove_modem()
 {
 	struct modem_data *modem = ofono_modem;
 
-	LOG("remove_modem");
 	if (modem != NULL) {
+		LOG("remove_modem");
 		dbus_connection_unref(modem->conn);
 
 		g_free(modem->temp->context_path);
