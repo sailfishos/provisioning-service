@@ -24,10 +24,7 @@ extern "C" {
 
 struct provisioning_data {
 	struct internet *internet;
-//	GSList *w2;
 	struct w2 *w2;
-/* There might be others but lets assume for now that only one mms context */
-//	GSList *w4;
 	struct w4 *w4;
 };
 struct internet {
@@ -41,7 +38,6 @@ struct w2 {
 	char *apn;
 	char *username;
 	char *password;
-//	char *protocol; notsure if this needed
 };
 
 struct w4 {
@@ -49,7 +45,6 @@ struct w4 {
 	char *apn;
 	char *username;
 	char *password;
-//	char *protocol; notsure if this needed
 	char *messageproxy;
 	char *messagecenter;
 	char *portnro;

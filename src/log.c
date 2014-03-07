@@ -26,10 +26,10 @@
 static int logtarget = NONE;
 static int log_priority = LOG_DEBUG;//LOG_ERR;
 /*
- * Reads log target from env setting.
+ * If no commandline target given reads log target from env setting.
  * May be called several times, supports dynamic re-configuration.
  *
- * call "$export set PROVISIONING_SERVICE_LOG=" with a value to activate logging.
+ * call "$export set PROVISIONING_SERVICE_LOG=" with a value to activate logs.
  */
 extern void initlog(int target)
 {

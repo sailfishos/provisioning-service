@@ -63,7 +63,7 @@ static void unregister_func(DBusConnection *connection, void *user_data)
 {
 	struct generic_data *data = user_data;
 
-	LOG("unregister_func\n");
+	LOG("unregister_func");
 
 	if (data->process_id > 0) {
 		g_source_remove(data->process_id);
@@ -86,7 +86,7 @@ static gboolean g_dbus_args_have_signature(const GDBusArgInfo *args,
 
 		for (; *sig && *p; sig++, p++) {
 			if (*p != *sig) {
-				LOG("g_dbus_args_have_signature:%s,%s\n",
+				LOG("g_dbus_args_have_signature:%s,%s",
 						p,sig);
 				return FALSE;
 			}
@@ -135,8 +135,8 @@ static DBusHandlerResult message_func(DBusConnection *connection,
 					DBusMessage *message, void *user_data)
 {
 	struct generic_data *data = user_data;
-	LOG("message_func\n");
-	LOG("got dbus message sent to %s %s %s\n",
+	LOG("message_func");
+	LOG("got dbus message sent to %s %s %s",
 		dbus_message_get_destination(message),
 		dbus_message_get_interface(message),
 		dbus_message_get_path(message));
@@ -186,8 +186,8 @@ static gboolean add_interface(struct generic_data *data,
 	iface->methods = methods;
 	iface->user_data = user_data;
 	iface->destroy = destroy;
-	/*This is a bit overkill as we only have onw interface*/
-	LOG("add_interface(iface->name:%s,iface->methods->name:%s)\n",
+
+	LOG("add_interface(iface->name:%s,iface->methods->name:%s)",
 			iface->name,iface->methods->name);
 	data->interfaces = g_slist_append(data->interfaces, iface);
 
@@ -226,7 +226,7 @@ static gboolean remove_interface(struct generic_data *data, const char *name)
 static void object_path_unref(DBusConnection *connection, const char *path)
 {
 	struct generic_data *data = NULL;
-	LOG("object_path_unref\n");
+	LOG("object_path_unref");
 	if (dbus_connection_get_object_path_data(connection, path,
 						(void *) &data) == FALSE)
 		return;
@@ -259,7 +259,7 @@ static struct generic_data *object_path_ref(DBusConnection *connection,
 	data->conn = dbus_connection_ref(connection);
 	data->path = g_strdup(path);
 	data->refcount = 1;
-	LOG("object_path_ref(data->conn:%p,data->path:%s)\n",
+	LOG("object_path_ref(data->conn:%p,data->path:%s)",
 			data->conn,data->path);
 	if (!dbus_connection_register_object_path(connection, path,
 						&generic_table, data)) {
@@ -281,7 +281,7 @@ gboolean register_dbus_interface(DBusConnection *connection,
 	data = object_path_ref(connection, path);
 	if (data == NULL)
 		return FALSE;
-	LOG("register_dbus_interface: %p\n",data->conn);
+	LOG("register_dbus_interface: %p",data->conn);
 
 	if (!add_interface(data, name, methods, user_data, destroy)) {
 		object_path_unref(connection, path);
