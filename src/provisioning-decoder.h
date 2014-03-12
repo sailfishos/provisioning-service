@@ -24,7 +24,7 @@ extern "C" {
 
 gboolean decode_provisioning_wbxml(const char *array, int array_len);
 
-#if 0
+#ifdef FILEWRITE
 /*used for testing*/
 void print_to_file(char *array, int array_len, char *file_name);
 #endif
