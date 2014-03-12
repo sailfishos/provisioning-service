@@ -16,7 +16,7 @@ Requires:  dbus
 Requires:  ofono
 
 %description
-A service for handling over-the-air (OTA) provisioning messages
+For custom debugging dumps OTA provisioning wbxml and parsed xml to file
 
 %prep
 %setup -q -n %{name}-%{version}
