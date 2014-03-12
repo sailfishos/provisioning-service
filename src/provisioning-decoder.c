@@ -40,7 +40,7 @@ gboolean decode_provisioning_wbxml(const char *array, int array_len)
 							&params);
 
 	if( error == WBXML_OK ) {
-#if 0
+#ifdef FILEWRITE
 		char *file_name = "wbxml2xml.xml";
 		print_to_file((char*)xml,(int) xml_len, file_name);
 #endif
@@ -53,13 +53,16 @@ gboolean decode_provisioning_wbxml(const char *array, int array_len)
 
 	return FALSE;
 }
-#if 0
+#ifdef FILEWRITE
 void print_to_file(char *array, int array_len, char *file_name)
 {
 	LOG("array_len:%d", array_len);
 	FILE* fd = NULL;
-
-	fd = fopen(file_name, "w+");
+	char *path = FILEWRITE;
+	
+	LOG("%s",path);
+	path = g_strconcat(FILEWRITE "/", file_name, NULL);
+	fd = fopen(path, "w+");
 	if(!fd) {
 		LOG("fopen() Error!!!\n");
 		goto out;
