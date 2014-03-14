@@ -81,6 +81,42 @@ gboolean handle_exit(gpointer user_data)
 	return FALSE;
 }
 
+void send_signal(guint message)
+{
+	DBusConnection *conn = provisioning_dbus_get_connection();
+	DBusMessage *msg;
+	const char *name;
+
+	LOG("send_signal");
+
+	switch (message) {
+	case PROV_SUCCESS:
+		name = "apnProvisioningSucceeded";
+		break;
+	case PROV_PARTIAL_SUCCESS:
+		name = "apnProvisioningPartiallySucceeded";
+		break;
+	default:
+		name = "apnProvisioningFailed";
+		break;
+	}
+
+	msg = dbus_message_new_signal(PROVISIONING_SERVICE_PATH, // object name of the signal
+					PROVISIONING_SERVICE_INTERFACE, // interface name of the signal
+					name); // name of the signal
+
+
+	if (msg == NULL)
+		goto out;
+
+	if (!dbus_connection_send(conn, msg, NULL))
+		goto out;
+
+	dbus_connection_flush(conn);
+out:
+	dbus_message_unref(msg);
+}
+
 static gboolean handle_message(char *array, int array_len)
 {
 
@@ -94,8 +130,10 @@ static gboolean handle_message(char *array, int array_len)
 	print_to_file(array, array_len, file_name);
 #endif
 
-	if (!decode_provisioning_wbxml(array, array_len))
+	if (!decode_provisioning_wbxml(array, array_len)) {
+		send_signal(PROV_FAILURE);
 		goto error;
+	}
 
 	if (provisioning_init_ofono() < 0) {
 		provisioning_exit_ofono();
@@ -187,10 +225,21 @@ error:
 	.out_args = _out_args, \
 	.function = _function, \
 
+#define GDBUS_SIGNAL(_name, _args) \
+	.name = _name, \
+	.args = _args
+
 static const GDBusMethodTable provisioning_methods[] = {
 	{ GDBUS_METHOD("HandleProvisioningMessage",
 			GDBUS_ARGS({ "provisioning_message", "ssuuiisay" }),
 			NULL, provisioning_handle_message) },
+	{ }
+};
+
+static const GDBusSignalTable provisioning_signals[] = {
+	{ GDBUS_SIGNAL("apnProvisioningSucceeded", NULL) },
+	{ GDBUS_SIGNAL("apnProvisioningPartiallySucceeded", NULL) },
+	{ GDBUS_SIGNAL("apnProvisioningFailed", NULL) },
 	{ }
 };
 
@@ -202,7 +251,9 @@ static gboolean provisioning_init(void)
 	LOG("provisioning_init:%p",conn);
 	ret = register_dbus_interface(conn, PROVISIONING_SERVICE_PATH,
 					PROVISIONING_SERVICE_INTERFACE,
-					provisioning_methods, NULL, NULL);
+					provisioning_methods,
+					provisioning_signals,
+					NULL, NULL);
 
 	return ret;
 }

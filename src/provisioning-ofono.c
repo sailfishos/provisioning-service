@@ -68,6 +68,7 @@ struct modem_data *ofono_modem;
 guint call_counter;
 guint idle_id;
 guint timer_id;
+guint signal_prov;
 
 static gboolean check_idle();
 static void provisioning_internet(struct modem_data *modem, struct internet *net);
@@ -84,6 +85,8 @@ static void clean_provisioning()
 
 	if (timer_id > 0)
 		g_source_remove(timer_id);
+
+	send_signal(signal_prov);
 
 	remove_modem();
 	clean_provisioning_data();
@@ -115,10 +118,14 @@ static void set_context_property_reply(DBusPendingCall *call, void *user_data)
 
 	dbus_error_init(&err);
 
+	if (signal_prov != PROV_PARTIAL_SUCCESS)
+		signal_prov = PROV_SUCCESS;
+
 	if (dbus_set_error_from_message(&err, reply) == TRUE) {
 		LOG("set_context_property_reply:%s: %s",
 			err.name, err.message);
 		dbus_error_free(&err);
+		signal_prov = PROV_PARTIAL_SUCCESS;
 	}
 
 	dbus_message_unref(reply);
@@ -143,6 +150,10 @@ static void deactivate_internet_context_reply(DBusPendingCall *call,
 			err.name, err.message);
 		dbus_error_free(&err);
 		dbus_message_unref(reply);
+
+		if (signal_prov != PROV_FAILURE)
+			signal_prov = PROV_PARTIAL_SUCCESS;
+
 		goto exit;
 	}
 
@@ -151,11 +162,19 @@ static void deactivate_internet_context_reply(DBusPendingCall *call,
 	prov_data = get_provisioning_data();
 	if (prov_data == NULL) {
 		LOG("No provisioning data");
+
+		if (signal_prov != PROV_FAILURE)
+			signal_prov = PROV_PARTIAL_SUCCESS;
+
 		clean_provisioning();
 		return;
 	}
 	if (!prov_data->internet->apn && !prov_data->internet->apn) {
 		LOG("No data to provisioning");
+
+		if (signal_prov != PROV_FAILURE)
+			signal_prov = PROV_PARTIAL_SUCCESS;
+
 		clean_provisioning();
 		return;
 	}
@@ -188,6 +207,10 @@ static void deactivate_mms_context_reply(DBusPendingCall *call, void *user_data)
 			err.name, err.message);
 		dbus_error_free(&err);
 		dbus_message_unref(reply);
+
+		if (signal_prov != PROV_FAILURE)
+			signal_prov = PROV_PARTIAL_SUCCESS;
+
 		goto exit;
 	}
 
@@ -196,11 +219,19 @@ static void deactivate_mms_context_reply(DBusPendingCall *call, void *user_data)
 	prov_data = get_provisioning_data();
 	if (prov_data == NULL) {
 		LOG("No provisioning data");
+
+		if (signal_prov != PROV_FAILURE)
+			signal_prov = PROV_PARTIAL_SUCCESS;
+
 		clean_provisioning();
 		return;
 	}
 	if (!prov_data->internet->apn && !prov_data->w4->apn) {
 		LOG("No data to provisioning");
+
+		if (signal_prov != PROV_FAILURE)
+			signal_prov = PROV_PARTIAL_SUCCESS;
+
 		clean_provisioning();
 		return;
 	}
@@ -298,12 +329,21 @@ static void add_mms_context_reply(DBusPendingCall *call, void *user_data)
 		LOG("add_mms_context_reply:%s: %s",
 			err.name, err.message);
 		dbus_error_free(&err);
+
+		if (signal_prov != PROV_FAILURE)
+			signal_prov = PROV_PARTIAL_SUCCESS;
+
 	}
 
 	if (!dbus_message_get_args (reply, NULL,
 					DBUS_TYPE_OBJECT_PATH, &path,
-					DBUS_TYPE_INVALID))
+					DBUS_TYPE_INVALID)) {
+
+		if (signal_prov != PROV_FAILURE)
+			signal_prov = PROV_PARTIAL_SUCCESS;
+
 		goto exit;
+	}
 
 	modem = ofono_modem;
 	modem->omms->context_path = g_strdup(path);
@@ -312,6 +352,10 @@ static void add_mms_context_reply(DBusPendingCall *call, void *user_data)
 	prov_data = get_provisioning_data();
 	if (prov_data == NULL) {
 		LOG("No provisioning data");
+
+		if (signal_prov != PROV_FAILURE)
+			signal_prov = PROV_PARTIAL_SUCCESS;
+
 		clean_provisioning();
 		return;
 	}
@@ -341,13 +385,22 @@ static void add_internet_context_reply(DBusPendingCall *call, void *user_data)
 		LOG("add_internet_context_reply:%s: %s",
 			err.name, err.message);
 		dbus_error_free(&err);
+
+		if (signal_prov != PROV_FAILURE)
+			signal_prov = PROV_PARTIAL_SUCCESS;
+
 	}
 
 	LOG("add_internet_context_reply2");
 	if (!dbus_message_get_args (reply, NULL,
 					DBUS_TYPE_OBJECT_PATH, &path,
-					DBUS_TYPE_INVALID))
+					DBUS_TYPE_INVALID)) {
+
+		if (signal_prov != PROV_FAILURE)
+			signal_prov = PROV_PARTIAL_SUCCESS;
+
 		goto exit;
+	}
 
 	modem = ofono_modem;
 	modem->oi->context_path = g_strdup(path);
@@ -356,9 +409,14 @@ static void add_internet_context_reply(DBusPendingCall *call, void *user_data)
 	prov_data = get_provisioning_data();
 	if (prov_data == NULL) {
 		LOG("No provisioning data");
+
+		if (signal_prov != PROV_FAILURE)
+			signal_prov = PROV_PARTIAL_SUCCESS;
+
 		clean_provisioning();
 		return;
 	}
+
 	if (prov_data->internet->apn)
 		provisioning_internet(modem,prov_data->internet);
 
@@ -1143,6 +1201,7 @@ int provisioning_init_ofono(void)
 	idle_id = 0;
 	ret = 0;
 	ofono_modem = NULL;
+	signal_prov = PROV_FAILURE;
 
 	connection = setup_dbus_bus(DBUS_BUS_SYSTEM, NULL, NULL);
 	if (connection == NULL) {
