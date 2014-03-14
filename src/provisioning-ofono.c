@@ -427,7 +427,7 @@ static gboolean create_contexts(struct modem_data *modem)
 	if (prov_data == NULL) {
 		LOG("No provisioning data");
 		clean_provisioning();
-		return;
+		return FALSE;
 	}
 	if (prov_data->internet->apn || prov_data->w2->apn)
 		ret1 = create_context(modem, "internet");

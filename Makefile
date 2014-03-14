@@ -6,6 +6,12 @@ LIBS = $(shell pkg-config --libs $(PKGS))
 LD_FLAGS := -Wall
 CFLAGS += -Wall $(shell pkg-config --cflags $(PKGS)) $(INCLUDES)
 
+FILEWRITE := $(strip $(FILEWRITE))
+
+ifdef FILEWRITE
+	CFLAGS += -DFILEWRITE='"$(FILEWRITE)"'
+endif
+
 src/$(EXE): $(OBJFILES)
 	   gcc $(LD_FLAGS) $(LIBS) -o $@ $^
 
