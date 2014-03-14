@@ -1,32 +1,66 @@
 #!/usr/bin/python
 
 import sys
+import gobject
 import dbus
+import dbus.mainloop.glib
 from dbus import ByteArray
 
-bus = dbus.SystemBus()
+def ApnProvisioningSucceeded():
+	print "apnProvisioningSucceeded."
+	if canexit:
+		mainloop.quit()
 
-provisioning = dbus.Interface(bus.get_object('org.nemomobile.provisioning', '/'),
-						'org.nemomobile.provisioning.interface')
+def ApnProvisioningPartiallySucceeded():
+	print "apnProvisioningPartiallySucceeded."
+	if canexit:
+		mainloop.quit()
 
-s1 = dbus.String("")
-s2 = dbus.String("")
-u1 = dbus.UInt32(0)
-u2 = dbus.UInt32(0)
-i1 = int(0)
-i2 = int(0)
-s3 = dbus.String("")
+def ApnProvisioningFailed():
+	print "apnProvisioningFailed."
+	if canexit:
+		mainloop.quit()
 
-if (len(sys.argv) == 2):
-	file = sys.argv[1]
-else:
-	file = 'prov.wbxml'
+if __name__ == '__main__':
+	dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
-f = open(file, 'r')
-content = f.read()
-bytes = ByteArray(content)
+	bus = dbus.SystemBus()
 
-try:
-	provisioning.HandleProvisioningMessage(s1,s2,u1,u2,i1,i2,s3,bytes, timeout = 0)
-except dbus.exceptions.DBusException:
-	pass
+	provisioning = dbus.Interface(
+			bus.get_object('org.nemomobile.provisioning', '/'),
+					'org.nemomobile.provisioning.interface')
+
+	provisioning.connect_to_signal("apnProvisioningSucceeded",
+					ApnProvisioningSucceeded)
+	provisioning.connect_to_signal("apnProvisioningPartiallySucceeded",
+					ApnProvisioningPartiallySucceeded)
+	provisioning.connect_to_signal("apnProvisioningFailed",
+					ApnProvisioningFailed)
+
+	s1 = dbus.String("")
+	s2 = dbus.String("")
+	u1 = dbus.UInt32(0)
+	u2 = dbus.UInt32(0)
+	i1 = int(0)
+	i2 = int(0)
+	s3 = dbus.String("")
+
+	if (len(sys.argv) == 2):
+		file = sys.argv[1]
+	else:
+		file = 'prov.wbxml'
+
+	f = open(file, 'r')
+	content = f.read()
+	bytes = ByteArray(content)
+
+	try:
+		provisioning.HandleProvisioningMessage(s1,s2,u1,u2,i1,i2,s3,
+							bytes, timeout = 0)
+	except dbus.exceptions.DBusException:
+		pass
+
+	canexit = True
+
+	mainloop = gobject.MainLoop()
+	mainloop.run()
