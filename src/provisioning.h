@@ -22,7 +22,16 @@
 extern "C" {
 #endif
 
+enum prov_signal {
+	PROV_SUCCESS = 0,
+	PROV_PARTIAL_SUCCESS = 1,
+	PROV_FAILURE = 2,
+
+};
+
 gboolean handle_exit(gpointer user_data);
+
+void send_signal(guint message);
 
 #ifdef __cplusplus
 }
