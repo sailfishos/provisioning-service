@@ -46,5 +46,3 @@ than the current way?
 
 -Are all the policies really needed in provisioning.conf?
 
--Change writing receved wbxml and parsed xml file writing activation more
- dynamic. I.e. build or run time configurable.
