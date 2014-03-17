@@ -51,6 +51,7 @@ struct generic_data {
 	GSList *added;
 //	GSList *removed;
 	guint process_id;
+	char *introspect;
 };
 
 static DBusConnection *g_connection;
@@ -72,6 +73,7 @@ static void unregister_func(DBusConnection *connection, void *user_data)
 	}
 
 	dbus_connection_unref(data->conn);
+	g_free(data->introspect);
 	g_free(data->path);
 	g_free(data);
 }
@@ -100,6 +102,116 @@ static gboolean g_dbus_args_have_signature(const GDBusArgInfo *args,
 	return TRUE;
 }
 
+static void print_arguments(GString *gstr, const GDBusArgInfo *args,
+						const char *direction)
+{
+	for (; args && args->name; args++) {
+		g_string_append_printf(gstr,
+					"<arg name=\"%s\" type=\"%s\"",
+					args->name, args->signature);
+
+		if (direction)
+			g_string_append_printf(gstr,
+					" direction=\"%s\"/>\n", direction);
+		else
+			g_string_append_printf(gstr, "/>\n");
+
+	}
+}
+
+static void generate_interface_xml(GString *gstr, struct interface_data *iface)
+{
+	const GDBusMethodTable *method;
+	const GDBusSignalTable *signal;
+
+	LOG("generate_interface_xml");
+	for (method = iface->methods; method && method->name; method++) {
+
+		g_string_append_printf(gstr, "<method name=\"%s\">",
+								method->name);
+		print_arguments(gstr, method->in_args, "in");
+		print_arguments(gstr, method->out_args, "out");
+
+		g_string_append_printf(gstr, "</method>");
+	}
+
+	for (signal = iface->signal; signal && signal->name; signal++) {
+
+		g_string_append_printf(gstr, "<signal name=\"%s\">",
+								signal->name);
+		print_arguments(gstr, signal->args, NULL);
+
+		g_string_append_printf(gstr, "</signal>\n");
+	}
+
+}
+
+static void generate_introspection_xml(DBusConnection *conn,
+				struct generic_data *data, const char *path)
+{
+	GSList *list;
+	GString *gstr;
+	char **children;
+	int i;
+
+	LOG("generate_introspection_xml");
+	g_free(data->introspect);
+
+	gstr = g_string_new(DBUS_INTROSPECT_1_0_XML_DOCTYPE_DECL_NODE);
+
+	g_string_append_printf(gstr, "<node>");
+
+	for (list = data->interfaces; list; list = list->next) {
+		struct interface_data *iface = list->data;
+
+		g_string_append_printf(gstr, "<interface name=\"%s\">",
+								iface->name);
+
+		generate_interface_xml(gstr, iface);
+
+		g_string_append_printf(gstr, "</interface>");
+	}
+
+	if (!dbus_connection_list_registered(conn, path, &children))
+		goto done;
+
+	for (i = 0; children[i]; i++)
+		g_string_append_printf(gstr, "<node name=\"%s\"/>",
+								children[i]);
+
+	dbus_free_string_array(children);
+
+done:
+	g_string_append_printf(gstr, "</node>");
+	data->introspect = g_string_free(gstr, FALSE);
+}
+
+static DBusMessage *introspect(DBusConnection *connection,
+				DBusMessage *message, void *user_data)
+{
+	struct generic_data *data = user_data;
+	DBusMessage *reply;
+	LOG("introspect");
+
+	generate_introspection_xml(connection, data,
+						dbus_message_get_path(message));
+
+	reply = dbus_message_new_method_return(message);
+	if (reply == NULL)
+		return NULL;
+
+	dbus_message_append_args(reply, DBUS_TYPE_STRING, &data->introspect,
+					DBUS_TYPE_INVALID);
+
+	if (!exit_handler) {
+		exit_handler = g_new0(struct timeout_handler, 1);
+		exit_handler->id = g_timeout_add_seconds(1, handle_exit,
+								exit_handler);
+	}
+
+	return reply;
+}
+
 static DBusHandlerResult process_message(DBusConnection *connection,
 			DBusMessage *message, const GDBusMethodTable *method,
 							void *iface_user_data)
@@ -108,9 +220,12 @@ static DBusHandlerResult process_message(DBusConnection *connection,
 
 	reply = method->function(connection, message, iface_user_data);
 
-	if (reply != NULL) {
-		dbus_message_unref(reply);
-	}
+	if (reply == NULL)
+		return DBUS_HANDLER_RESULT_HANDLED;
+
+	dbus_connection_send(connection, reply, NULL);
+
+	dbus_message_unref(reply);
 
 	return DBUS_HANDLER_RESULT_HANDLED;
 }
@@ -172,6 +287,12 @@ static DBusHandlerResult message_func(DBusConnection *connection,
 static DBusObjectPathVTable generic_table = {
 	.unregister_function	= unregister_func,
 	.message_function	= message_func,
+};
+
+static const GDBusMethodTable introspect_methods[] = {
+	{ GDBUS_METHOD("Introspect", NULL,
+			GDBUS_ARGS({ "xml", "s" }), introspect) },
+	{ }
 };
 
 static gboolean add_interface(struct generic_data *data,
@@ -262,13 +383,21 @@ static struct generic_data *object_path_ref(DBusConnection *connection,
 	data->conn = dbus_connection_ref(connection);
 	data->path = g_strdup(path);
 	data->refcount = 1;
+
+	data->introspect = g_strdup(DBUS_INTROSPECT_1_0_XML_DOCTYPE_DECL_NODE "<node></node>");
+
 	LOG("object_path_ref(data->conn:%p,data->path:%s)",
 			data->conn,data->path);
+
 	if (!dbus_connection_register_object_path(connection, path,
 						&generic_table, data)) {
+		g_free(data->introspect);
 		g_free(data);
 		return NULL;
 	}
+
+	add_interface(data, DBUS_INTERFACE_INTROSPECTABLE, introspect_methods,
+						NULL, data, NULL);
 
 	return data;
 }
