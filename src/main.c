@@ -105,7 +105,6 @@ void send_signal(guint message)
 					PROVISIONING_SERVICE_INTERFACE, // interface name of the signal
 					name); // name of the signal
 
-
 	if (msg == NULL)
 		goto out;
 
