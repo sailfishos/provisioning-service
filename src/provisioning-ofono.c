@@ -69,6 +69,7 @@ guint call_counter;
 guint idle_id;
 guint timer_id;
 guint signal_prov;
+gboolean prov_failure;
 
 static gboolean check_idle();
 static void provisioning_internet(struct modem_data *modem, struct internet *net);
@@ -115,18 +116,34 @@ static void set_context_property_reply(DBusPendingCall *call, void *user_data)
 {
 	DBusMessage *reply = dbus_pending_call_steal_reply(call);
 	DBusError err;
+	gboolean failure = FALSE;
 
 	dbus_error_init(&err);
-
-	if (signal_prov != PROV_PARTIAL_SUCCESS)
-		signal_prov = PROV_SUCCESS;
 
 	if (dbus_set_error_from_message(&err, reply) == TRUE) {
 		LOG("set_context_property_reply:%s: %s",
 			err.name, err.message);
 		dbus_error_free(&err);
-		signal_prov = PROV_PARTIAL_SUCCESS;
+
+		/* if success before this fail */
+		if (signal_prov == PROV_SUCCESS)
+			signal_prov = PROV_PARTIAL_SUCCESS;
+
+		/* if all before this failed or first try and fail */
+		if (signal_prov == PROV_FAILURE)
+			failure = prov_failure = TRUE;
+
 	}
+
+	/* if first try is success */
+	if ((signal_prov == PROV_FAILURE) && (prov_failure == FALSE)
+						&& (failure == FALSE))
+		signal_prov = PROV_SUCCESS;
+
+	/* if previous failed but now succeeded */
+	if ( (signal_prov == PROV_FAILURE) && (prov_failure == TRUE)
+						&& (failure == FALSE))
+		signal_prov = PROV_PARTIAL_SUCCESS;
 
 	dbus_message_unref(reply);
 
@@ -1202,6 +1219,7 @@ int provisioning_init_ofono(void)
 	ret = 0;
 	ofono_modem = NULL;
 	signal_prov = PROV_FAILURE;
+	prov_failure = FALSE;
 
 	connection = setup_dbus_bus(DBUS_BUS_SYSTEM, NULL, NULL);
 	if (connection == NULL) {
