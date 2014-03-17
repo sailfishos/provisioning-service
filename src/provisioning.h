@@ -22,11 +22,25 @@
 extern "C" {
 #endif
 
+#define GDBUS_ARGS(args...) (const GDBusArgInfo[]) { args, { } }
+
+#define GDBUS_METHOD(_name, _in_args, _out_args, _function) \
+	.name = _name, \
+	.in_args = _in_args, \
+	.out_args = _out_args, \
+	.function = _function, \
+
+#define GDBUS_SIGNAL(_name, _args) \
+	.name = _name, \
+	.args = _args
+
 enum prov_signal {
 	PROV_SUCCESS = 0,
 	PROV_PARTIAL_SUCCESS = 1,
 	PROV_FAILURE = 2,
 };
+
+struct timeout_handler *exit_handler;
 
 gboolean handle_exit(gpointer user_data);
 
