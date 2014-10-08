@@ -186,8 +186,8 @@ static void deactivate_internet_context_reply(DBusPendingCall *call,
 		clean_provisioning();
 		return;
 	}
-	if (!prov_data->internet->apn && !prov_data->internet->apn) {
-		LOG("No data to provisioning");
+	if (!prov_data->internet->apn && !prov_data->w2->apn) {
+		LOG("No provisioning data");
 
 		if (signal_prov != PROV_FAILURE)
 			signal_prov = PROV_PARTIAL_SUCCESS;
