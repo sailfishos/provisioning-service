@@ -33,6 +33,7 @@ mkdir -p %{buildroot}/%{_sharedstatedir}/provisioning_service/
 %files
 %defattr(-,root,root,-)
 %{_libexecdir}/provisioning-service
+/lib/systemd/system/*.service
 %config %{_sysconfdir}/dbus-1/system.d/provisioning.conf
 %{_datadir}/dbus-1/system-services/org.nemomobile.provisioning.service
 %config %{_sysconfdir}/ofono/push_forwarder.d/ofono-provisioning.conf

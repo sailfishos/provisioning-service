@@ -1,0 +1,7 @@
+[Unit]
+Description=Provisioning service
+
+[Service]
+Type=dbus
+BusName=org.nemomobile.provisioning
+ExecStart=/usr/libexec/provisioning-service
