@@ -1,4 +1,4 @@
 [D-BUS Service]
 Name=org.nemomobile.provisioning
-Exec=/usr/libexec/provisioning-service
-User=root
+Exec=/bin/false
+SystemdService=dbus-org.nemomobile.provisioning.service

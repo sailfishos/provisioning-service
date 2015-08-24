@@ -31,6 +31,7 @@ rm -rf %{buildroot}
 %files
 %defattr(-,root,root,-)
 %{_libexecdir}/provisioning-service
+/lib/systemd/system/*.service
 %{_sysconfdir}/dbus-1/system.d/provisioning.conf
 %{_datadir}/dbus-1/system-services/org.nemomobile.provisioning.service
 %{_sysconfdir}/ofono/push_forwarder.d/ofono-provisioning.conf

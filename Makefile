@@ -24,10 +24,11 @@ clean:
 install : src/$(EXE)
 	mkdir -p $(DESTDIR)/usr/libexec
 	mkdir -p $(DESTDIR)/etc/dbus-1/system.d
+	mkdir -p $(DESTDIR)/lib/systemd/system
 	mkdir -p $(DESTDIR)/usr/share/dbus-1/system-services
 	mkdir -p $(DESTDIR)/etc/ofono/push_forwarder.d
 	cp src/$(EXE) $(DESTDIR)/usr/libexec/
 	cp src/provisioning.conf $(DESTDIR)/etc/dbus-1/system.d/
 	cp src/org.nemomobile.provisioning.service $(DESTDIR)/usr/share/dbus-1/system-services/
 	cp ofono-provisioning.conf $(DESTDIR)/etc/ofono/push_forwarder.d/
-
+	cp src/dbus-org.nemomobile.provisioning.service $(DESTDIR)/lib/systemd/system/
