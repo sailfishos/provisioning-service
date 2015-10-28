@@ -1,18 +1,16 @@
 Name:       provisioning-service
 Summary:    OTA provisioning service
-Version:    0.0.1
+Version:    0.0
 Release:    1
 Group:      Communications/Telephony and IM
 License:    GPLv2
-# TODO: check the URL
-URL:        https://github.com
+URL:        https://git.merproject.org/mer-core/provisioning-service
 Source0:    %{name}-%{version}.tar.bz2
 BuildRequires:  pkgconfig(glib-2.0)
 BuildRequires:  pkgconfig(dbus-1)
 BuildRequires:  pkgconfig(libwbxml2)
-Requires:  libxml2
-Requires:  libwbxml2
-Requires:  dbus
+BuildRequires:  pkgconfig(libgofono)
+BuildRequires:  pkgconfig(libglibutil)
 Requires:  ofono
 
 %description
@@ -22,7 +20,7 @@ A service for handling over-the-air (OTA) provisioning messages
 %setup -q -n %{name}-%{version}
 
 %build
-make %{?_smp_mflags}
+make %{?_smp_mflags} KEEP_SYMBOLS=1 release
 
 %install
 rm -rf %{buildroot}
