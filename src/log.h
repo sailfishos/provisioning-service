@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2014 Jolla Ltd.
+ *  Copyright (C) 2014-2015 Jolla Ltd.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 2 as
@@ -19,9 +19,9 @@
 #ifndef __PROVSERVICELOG_H
 #define __PROVSERVICELOG_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#define GLOG_MODULE_NAME provisioning_log
+
+#include <gutil_log.h>
 
 /* Initializes logger */
 extern void initlog(int target);
@@ -32,9 +32,5 @@ extern void prov_debug(const char *format, ...);
 #define LOG(fmt, args...) { \
 		prov_debug(fmt, ## args); \
 }
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /*__PROVSERVICELOG_H */

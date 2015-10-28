@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2014 Jolla Ltd.
+ *  Copyright (C) 2014-2015 Jolla Ltd.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 2 as
@@ -18,10 +18,6 @@
 #ifndef __PROV_H
 #define __PROV_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #define GDBUS_ARGS(args...) (const GDBusArgInfo[]) { args, { } }
 
 #define GDBUS_METHOD(_name, _in_args, _out_args, _function) \
@@ -33,21 +29,5 @@ extern "C" {
 #define GDBUS_SIGNAL(_name, _args) \
 	.name = _name, \
 	.args = _args
-
-enum prov_signal {
-	PROV_SUCCESS = 0,
-	PROV_PARTIAL_SUCCESS = 1,
-	PROV_FAILURE = 2,
-};
-
-struct timeout_handler *exit_handler;
-
-gboolean handle_exit(gpointer user_data);
-
-void send_signal(guint message);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* __PROV_H */

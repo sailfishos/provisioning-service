@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2014 Jolla Ltd.
+ *  Copyright (C) 2014-2015 Jolla Ltd.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 2 as
@@ -18,29 +18,19 @@
 #ifndef __PROVXMLPARSER_H
 #define __PROVXMLPARSER_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 struct provisioning_data {
-	struct internet *internet;
-	struct w2 *w2;
-	struct w4 *w4;
+	struct provisioning_internet *internet;
+	struct provisioning_mms *mms;
 };
-struct internet {
-	char *name;
-	char *apn;
-	char *username;
-	char *password;
-};
-struct w2 {
+
+struct provisioning_internet {
 	char *name;
 	char *apn;
 	char *username;
 	char *password;
 };
 
-struct w4 {
+struct provisioning_mms {
 	char *name;
 	char *apn;
 	char *username;
@@ -50,14 +40,16 @@ struct w4 {
 	char *portnro;
 };
 
-void *get_provisioning_data();
-
-int parse_xml_main(const char *document,int length);
-
-void clean_provisioning_data();
-
-#ifdef __cplusplus
-}
-#endif
+struct provisioning_data *parse_xml_main(const char *xml, int len);
+void provisioning_data_free(struct provisioning_data *data);
 
 #endif /* __PROVXMLPARSER_H */
+
+/*
+ * Local Variables:
+ * mode: C
+ * tab-width: 4
+ * c-basic-offset: 4
+ * indent-tabs-mode: t
+ * End:
+ */
