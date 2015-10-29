@@ -125,7 +125,7 @@ handle_message(
 #ifdef FILEWRITE
 	GError *error = NULL;
 	const char *path = FILEWRITE "/received_wbxml";
-	if (g_file_set_contents(path, msg, len, &error)) {
+	if (g_file_set_contents(path, (void*)msg, len, &error)) {
 		LOG("wrote file: %s len: %d", path, len);
 	} else {
 		LOG("%s: %s", path, error->message);
