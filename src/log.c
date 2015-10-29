@@ -1,80 +1,71 @@
 /*
-* Copyright (C) 2014 Jolla Ltd.
-*
-* This program is free software; you can redistribute it and/or modify
-* it under the terms of the GNU General Public License as published by
-* the Free Software Foundation; either version 2 of the License, or
-* (at your option) any later version.
-*
-*/
+ * Copyright (C) 2014-2015 Jolla Ltd.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ */
 
-#include <stdarg.h>
-#include <stdio.h>
-#include <syslog.h>
-#include <stdlib.h>
-#include <string.h>
 #include "log.h"
+#include <gofono_types.h>
+#include <stdlib.h>
 
-#define JOURNAL "1"
-#define STDOUT "2"
-#define STDERR "3"
-#define NONE 0x00
 #define LOGJOURNAL 0x01
 #define LOGSTDOUT 0x02
 #define LOGSTDERR 0x03
 
-static int logtarget = NONE;
-static int log_priority = LOG_DEBUG;//LOG_ERR;
+GLOG_MODULE_DEFINE("provisioning");
+
 /*
  * If no commandline target given reads log target from env setting.
  * May be called several times, supports dynamic re-configuration.
  *
  * call "$export set PROVISIONING_SERVICE_LOG=" with a value to activate logs.
  */
-extern void initlog(int target)
+void initlog(int target)
 {
-	char *logarg = NULL;
-
-	if (target > 0)
-		logtarget = target;
-	else {
-		logarg = getenv("PROVISIONING_SERVICE_LOG");
-
+	if (target <= 0) {
+		const char *logarg = getenv("PROVISIONING_SERVICE_LOG");
 		if (logarg) {
-			if (!strcmp(logarg, JOURNAL))
-				logtarget = LOGJOURNAL;
-			else if (!strcmp(logarg, STDOUT))
-				logtarget = LOGSTDOUT;
-			else if (!strcmp(logarg, STDERR))
-				logtarget = LOGSTDERR;
+			target = atoi(logarg);
 		}
+	}
+	if (target > 0) {
+		GLOG_MODULE_NAME.level = GLOG_MODULE_NAME.max_level;
+		gofono_log.level = gofono_log.max_level;
+		switch (target) {
+		case LOGJOURNAL:
+			gutil_log_func = gutil_log_syslog;
+			break;
+		case LOGSTDOUT:
+			gutil_log_func = gutil_log_stdout;
+			break;
+		case LOGSTDERR:
+			gutil_log_func = gutil_log_stderr;
+			break;
+		}
+	} else {
+		GLOG_MODULE_NAME.level = GLOG_LEVEL_ERR;
+		gofono_log.level = GLOG_LEVEL_ERR;
 	}
 }
 
 /* Implementation of logging function */
-extern void prov_debug(const char *format, ...)
+void prov_debug(const char *format, ...)
 {
 	va_list args;
-
-	/* Skip all function calls if no logging */
-	if (logtarget == NONE)
-		return;
-	
 	va_start(args, format);
-
-	switch (logtarget) {
-	case LOGJOURNAL:
-		vsyslog(log_priority, format, args);
-		break;
-	case LOGSTDOUT:
-		vfprintf(stdout, format , args);
-		fprintf(stdout, "\n");
-		break;
-	case LOGSTDERR:
-		vfprintf(stderr, format, args);
-		fprintf(stderr, "\n");
-		break;
-	}
-
+	gutil_logv(GLOG_MODULE_CURRENT, GLOG_LEVEL_DEBUG, format, args);
 	va_end(args);
 }
+
+/*
+ * Local Variables:
+ * mode: C
+ * tab-width: 4
+ * c-basic-offset: 4
+ * indent-tabs-mode: t
+ * End:
+ */

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2014 Jolla Ltd.
+ *  Copyright (C) 2014-2015 Jolla Ltd.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 2 as
@@ -25,68 +25,43 @@
 #include "provisioning-decoder.h"
 #include "provisioning-ofono.h"
 
-
 #define PROVISIONING_SERVICE "org.nemomobile.provisioning"
 #define PROVISIONING_SERVICE_INTERFACE "org.nemomobile.provisioning.interface"
 #define PROVISIONING_SERVICE_PATH "/"
 
+static guint exit_timeout_id;
 static GMainLoop *loop;
-GSList *msglist;
+static int pending_count;
 
-struct provisioning_request {
-	char *array; /* Byte array containing client request*/
-	int array_len; /* Length of request byte array */
-};
-
-static gboolean handle_message(char *array, int array_len);
-
-static void provisioning_exit(void)
+static gboolean handle_exit(gpointer data)
 {
+	exit_timeout_id = 0;
+	LOG("provisioning_exit");
 	g_main_loop_quit(loop);
-}
-
-gboolean handle_exit(gpointer user_data)
-{
-	struct timeout_handler *handler = user_data;
-	struct provisioning_request *req;
-
-	if (handler) {
-		handler->id = 0;
-		g_free(handler);
-	}
-
-	GSList *l = NULL;
-	if (msglist != NULL)
-		l = g_slist_last(msglist);
-
-	if (l != NULL) {
-		req = l->data;
-		g_free(req->array);
-		g_free(req);
-		msglist = g_slist_remove(msglist,l->data);
-	}
-
-	if (msglist == NULL) {
-		provisioning_exit();
-		LOG("provisioning_exit");
-	} else {
-		l = g_slist_last(msglist);
-		if (l != NULL) {
-			req = l->data;
-			handle_message(req->array,req->array_len);
-		}
-	}
-
 	return FALSE;
 }
 
-void send_signal(guint message)
+static void cancel_exit()
+{
+	if (exit_timeout_id) {
+		g_source_remove(exit_timeout_id);
+		exit_timeout_id = 0;
+	}
+}
+
+static void schedule_exit()
+{
+	cancel_exit();
+	if (!pending_count) {
+		exit_timeout_id = g_timeout_add_seconds(2, handle_exit, NULL);
+	}
+}
+
+static void send_signal(enum prov_result message)
 {
 	DBusConnection *conn = provisioning_dbus_get_connection();
 	DBusMessage *msg;
 	const char *name;
-
-	LOG("send_signal");
 
 	switch (message) {
 	case PROV_SUCCESS:
@@ -100,6 +75,7 @@ void send_signal(guint message)
 		break;
 	}
 
+	LOG("send_signal %s", name);
 	msg = dbus_message_new_signal(PROVISIONING_SERVICE_PATH, // object name of the signal
 					PROVISIONING_SERVICE_INTERFACE, // interface name of the signal
 					name); // name of the signal
@@ -115,60 +91,64 @@ out:
 	dbus_message_unref(msg);
 }
 
-static gboolean handle_message(char *array, int array_len)
+static void provisioning_done(enum prov_result result, void *param)
 {
+	LOG("Provisioning result %d", result);
+	send_signal(result);
+	pending_count--;
+	schedule_exit();
+}
 
-	LOG("handle_message");
+static gboolean handle_message(const char *imsi, const char *msg, int len)
+{
+	struct provisioning_data *prov_data;
+	LOG("handle_message %s %d bytes", imsi, len);
 
-	if (array_len < 0)
+	if (len < 0)
 		goto error;
 
 #ifdef FILEWRITE
-	char *file_name = "received_wbxml";
-	print_to_file(array, array_len, file_name);
+	print_to_file(msg, len, "received_wbxml");
 #endif
 
-	if (!decode_provisioning_wbxml(array, array_len)) {
+	prov_data = decode_provisioning_wbxml(msg, len);
+	if (prov_data) {
+		cancel_exit();
+		pending_count++;
+		provisioning_ofono(imsi, prov_data, provisioning_done, NULL);
+	} else {
 		send_signal(PROV_FAILURE);
-		goto error;
-	}
-
-	if (provisioning_init_ofono() < 0) {
-		provisioning_exit_ofono();
 		goto error;
 	}
 
 	LOG("provisioning_handle_message: SUCCESS");
 	return TRUE;
-error:
-	return FALSE;
 
+error:
+	schedule_exit();
+	return FALSE;
 }
 
 static DBusMessage *provisioning_handle_message(DBusConnection *conn,
 					DBusMessage *msg, void *data)
 {
-	struct provisioning_request *req, *lastreq;
 	char *array; /* Byte array containing client request*/
 	int array_len; /* Length of request byte array */
 	DBusMessageIter iter;
 	DBusMessageIter subiter;
-	GSList *l;
+	const char *imsi = NULL;
 
 	LOG("provisioning_handle_message");
 
-	if (exit_handler) {
-		if(exit_handler->id > 0) {
-			g_source_remove(exit_handler->id);
-			exit_handler->id = 0;
-		}
-		g_free(exit_handler);
-	}
-
 	dbus_message_iter_init(msg, &iter);
 
-	/*Let's first skip the parts we are not interested*/
-	dbus_message_iter_next(&iter);	// 's'
+	if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_STRING)
+		goto error;
+
+	dbus_message_iter_get_basic(&iter, &imsi);
+	dbus_message_iter_next(&iter);
+
+	/* Skip the parts we are not interested in */
 	dbus_message_iter_next(&iter);	// 's'
 	dbus_message_iter_next(&iter);	// 'u'
 	dbus_message_iter_next(&iter);	// 'u'
@@ -189,33 +169,13 @@ static DBusMessage *provisioning_handle_message(DBusConnection *conn,
 
 	dbus_message_iter_get_fixed_array(&subiter, &array, &array_len);
 
-	req = g_try_new0(struct provisioning_request, 1);
-	if (req == NULL)
-		goto error;
-
-	req->array_len = array_len;
-	req->array = g_try_new0(char, req->array_len);
-	if (req->array == NULL)
-		goto error;
-
-	memcpy(req->array, array, req->array_len);
-
-	msglist = g_slist_prepend(msglist, req);
-
-	l = g_slist_last(msglist);
-	lastreq = l->data;
-	if (lastreq == req)
-		if (handle_message(lastreq->array,lastreq->array_len))
-			return NULL;
+	handle_message(imsi, array, array_len);
+	return NULL;
 
 error:
-	LOG("provisioning failed");
-	exit_handler = g_new0(struct timeout_handler, 1);
-	exit_handler->id = g_timeout_add_seconds(1, handle_exit, exit_handler);
+	schedule_exit();
 	return NULL;
 }
-
-
 
 static const GDBusMethodTable provisioning_methods[] = {
 	{ GDBUS_METHOD("HandleProvisioningMessage",
@@ -253,6 +213,7 @@ static void provisioning_cleanup(void)
 	unregister_dbus_interface(conn, PROVISIONING_SERVICE_PATH,
 					PROVISIONING_SERVICE_INTERFACE);
 }
+
 static gint debug_target = 0;
 
 static GOptionEntry entries[] = {
@@ -290,9 +251,6 @@ int main( int argc, char **argv )
 
 	loop = g_main_loop_new(NULL, FALSE);
 
-	exit_handler = NULL;
-	msglist = NULL;
-
 	dbus_error_init(&err);
 	/* connect to the bus and check for errors. */
 	conn = setup_dbus_bus(DBUS_BUS_SYSTEM, PROVISIONING_SERVICE, &err);
@@ -312,6 +270,8 @@ int main( int argc, char **argv )
 	if(!provisioning_init())
 		LOG("provisioning_init failed!");
 
+	/* Exit in 30 seconds if nothing is happening */
+	exit_timeout_id = g_timeout_add_seconds(30, handle_exit, NULL);
 	g_main_loop_run(loop);
 
 	provisioning_cleanup();
@@ -323,3 +283,12 @@ cleanup:
 	return 0;
 
 }
+
+/*
+ * Local Variables:
+ * mode: C
+ * tab-width: 4
+ * c-basic-offset: 4
+ * indent-tabs-mode: t
+ * End:
+ */

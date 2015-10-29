@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2014 Jolla Ltd.
+ *  Copyright (C) 2014-2015 Jolla Ltd.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 2 as
@@ -18,20 +18,14 @@
 #ifndef __PROVSERVICEDECODER_H
 #define __PROVSERVICEDECODER_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-gboolean decode_provisioning_wbxml(const char *array, int array_len);
+struct provisioning_data *
+decode_provisioning_wbxml(
+	const char *array,
+	int array_len);
 
 #ifdef FILEWRITE
 /*used for testing*/
-void print_to_file(char *array, int array_len, char *file_name);
-#endif
-
-
-#ifdef __cplusplus
-}
+void print_to_file(const void *data, int len, const char *file);
 #endif
 
 #endif /* __PROVSERVICEDECODER_H */

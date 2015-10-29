@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2014 Jolla Ltd.
+ *  Copyright (C) 2014-2015 Jolla Ltd.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 2 as
@@ -15,19 +15,32 @@
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  *
  */
+
 #ifndef __PROVOFONO_H
 #define __PROVOFONO_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+struct provisioning_data;
 
-int provisioning_init_ofono(void);
+enum prov_result {
+	PROV_SUCCESS = 0,
+	PROV_PARTIAL_SUCCESS = 1,
+	PROV_FAILURE = 2,
+};
 
-void provisioning_exit_ofono(void);
-
-#ifdef __cplusplus
-}
-#endif
+void
+provisioning_ofono(
+	const char *imsi,
+	struct provisioning_data *data,
+	void (*done)(enum prov_result result, void *param),
+	void *param);
 
 #endif /* __PROVOFONO_H */
+
+/*
+ * Local Variables:
+ * mode: C
+ * tab-width: 4
+ * c-basic-offset: 4
+ * indent-tabs-mode: t
+ * End:
+ */

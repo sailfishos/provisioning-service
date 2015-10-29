@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2014 Jolla Ltd.
+ *  Copyright (C) 2014-2015 Jolla Ltd.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 2 as
@@ -203,12 +203,6 @@ static DBusMessage *introspect(DBusConnection *connection,
 	dbus_message_append_args(reply, DBUS_TYPE_STRING, &data->introspect,
 					DBUS_TYPE_INVALID);
 
-	if (!exit_handler) {
-		exit_handler = g_new0(struct timeout_handler, 1);
-		exit_handler->id = g_timeout_add_seconds(1, handle_exit,
-								exit_handler);
-	}
-
 	return reply;
 }
 
@@ -280,7 +274,6 @@ static DBusHandlerResult message_func(DBusConnection *connection,
 		return process_message(connection, message, method,
 							iface->user_data);
 	}
-	handle_exit(NULL);
 	return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 }
 

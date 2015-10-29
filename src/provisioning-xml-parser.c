@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2014 Jolla Ltd.
+ *  Copyright (C) 2014-2015 Jolla Ltd.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 2 as
@@ -26,9 +26,20 @@
 
 struct provisioning_data *prov_data;
 
-void *get_provisioning_data()
+struct provisioning_internet *prov_data_internet(struct provisioning_data *data)
 {
-	return prov_data;
+	if (!data->internet) {
+		data->internet = g_new0(struct provisioning_internet, 1);
+	}
+	return data->internet;
+}
+
+struct provisioning_mms *prov_data_mms(struct provisioning_data *data)
+{
+	if (!data->mms) {
+		data->mms = g_new0(struct provisioning_mms, 1);
+	}
+	return data->mms;
 }
 
 static xmlDocPtr parse_xml_to_tree(const char *content, int length)
@@ -43,7 +54,7 @@ static xmlDocPtr parse_xml_to_tree(const char *content, int length)
 	if (doc == NULL) {
 		LOG("Failed to parse document");
 		return NULL;
-		}
+    }
 	return doc;
 }
 
@@ -92,7 +103,6 @@ static xmlChar *parse_attribute(xmlNodePtr cur, const xmlChar *parm_name)
 
 static gboolean parm_exists(xmlNodePtr cur, const xmlChar *parm_name)
 {
-
 	xmlChar * name;
 	gboolean ret;
 
@@ -133,8 +143,8 @@ static xmlChar *get_apn(xmlNodePtr cur)
 	xmlChar *value;
 	value = parse_attribute(cur,(const xmlChar *)"NAP-ADDRTYPE");
 	if (!xmlStrcmp(value, (const xmlChar *)"APN")) {
-		return parse_attribute(cur,(const xmlChar *)"NAP-ADDRESS");
 		xmlFree(value);
+		return parse_attribute(cur,(const xmlChar *)"NAP-ADDRESS");
 	} else {
 		xmlFree(value);
 		return NULL;
@@ -163,34 +173,34 @@ static void handle_napauthinfo(xmlNodePtr temp, xmlChar *ctype, char *app_id)
 
 	attr = parse_attribute(temp,(const xmlChar *)"AUTHNAME");
 	if (attr != NULL) {
-		username = g_try_new0(char, strlen((char *)attr) + 1);
-		strcpy(username,(char *)attr);
+		username = g_strdup((char *)attr);
 		xmlFree(attr);
 	}
 
 	attr = parse_attribute(temp, (const xmlChar *)"AUTHSECRET");
 	if (attr != NULL) {
-		password = g_try_new0(char, strlen((char *)attr) + 1);
-		strcpy(password,(char *)attr);
+		password = g_strdup((char *)attr);
 		xmlFree(attr);
 	}
 
-	if (g_strcmp0(app_id,"w4") == 0)
-		prov_data->w4->username = username;
-	else if (g_strcmp0(app_id,"w2") == 0)
-		prov_data->w2->username = username;
-	else if (g_strcmp0(app_id,"internet") == 0)
-		prov_data->internet->username = username;
-	else
+	if (g_strcmp0(app_id,"w4") == 0) {
+		g_free(prov_data_mms(prov_data)->username);
+		prov_data_mms(prov_data)->username = username;
+	} else if (g_strcmp0(app_id,"w2") == 0 ||
+	           g_strcmp0(app_id,"internet") == 0) {
+		g_free(prov_data_internet(prov_data)->username);
+		prov_data_internet(prov_data)->username = username;
+	} else
 		g_free(username);
 
-	if (g_strcmp0(app_id,"w4") == 0)
-		prov_data->w4->password = password;
-	else if (g_strcmp0(app_id,"w2") == 0)
-		prov_data->w2->password = password;
-	else if (g_strcmp0(app_id,"internet") == 0)
-		prov_data->internet->password = password;
-	else
+	if (g_strcmp0(app_id,"w4") == 0) {
+		g_free(prov_data_mms(prov_data)->password);
+		prov_data_mms(prov_data)->password = password;
+	} else if (g_strcmp0(app_id,"w2") == 0 ||
+	           g_strcmp0(app_id,"internet") == 0) {
+		g_free(prov_data_internet(prov_data)->password);
+		prov_data_internet(prov_data)->password = password;
+	} else
 		g_free(password);
 }
 
@@ -235,17 +245,15 @@ static gboolean parse_internet(xmlNodePtr cur)
 
 		name = get_name(temp);
 		if (name != NULL) {
-			prov_data->internet->name = g_try_new0(char,
-						strlen((char *)name) + 1);
-			strcpy(prov_data->internet->name, (char*)name);
+			g_free(prov_data_internet(prov_data)->name);
+			prov_data_internet(prov_data)->name = g_strdup((char*)name);
 			xmlFree(name);
 		}
 
 		if (name != NULL) {
 			name = get_apn(temp);
-			prov_data->internet->apn = g_try_new0(char,
-							strlen((char *)name)+1);
-			strcpy(prov_data->internet->apn, (char *)name);
+			g_free(prov_data_internet(prov_data)->apn);
+			prov_data_internet(prov_data)->apn = g_strdup((char *)name);
 			xmlFree(name);
 		}
 
@@ -270,7 +278,6 @@ static gboolean parse_internet(xmlNodePtr cur)
 static void handle_application(xmlNodePtr temp, xmlChar *ctype,
 					char *ptr_to_id, char *app_id)
 {
-
 	xmlChar *attr, *name;
 
 	if (xmlStrcmp(ctype,(const xmlChar *)"APPLICATION"))
@@ -281,8 +288,7 @@ static void handle_application(xmlNodePtr temp, xmlChar *ctype,
 	/*w2*/
 	if ((!xmlStrcmp(attr, (const xmlChar *)"w2")) &&
 		(!xmlStrcmp(attr, (const xmlChar *)app_id))) {
-		name = parse_attribute(temp,
-					(const xmlChar *)"TO-NAPID");
+		name = parse_attribute(temp, (const xmlChar *)"TO-NAPID");
 		strcpy(ptr_to_id, (char *)name);
 		xmlFree(name);
 	}
@@ -293,9 +299,8 @@ static void handle_application(xmlNodePtr temp, xmlChar *ctype,
 
 		name = get_addr(temp);
 		if (name != NULL) {
-			prov_data->w4->messagecenter =
-				g_try_new0(char, strlen((char *)name) + 1);
-			strcpy(prov_data->w4->messagecenter, (char*)name);
+			g_free(prov_data_mms(prov_data)->messagecenter);
+			prov_data_mms(prov_data)->messagecenter = g_strdup((char*)name);
 			xmlFree(name);
 		}
 
@@ -328,15 +333,13 @@ static void handle_napdef(xmlNodePtr temp, xmlChar *ctype,
 
 	child_attr = get_apn(temp);
 	if (child_attr != NULL) {
-		apn = g_try_new0(char, strlen((char *)child_attr) + 1);
-		strcpy(apn, (char*)child_attr);
+		apn = g_strdup((char *)child_attr);
 		xmlFree(child_attr);
 	}
 
 	child_attr = get_name(temp);
 	if (child_attr != NULL) {
-		name = g_try_new0(char, strlen((char *)child_attr) + 1);
-		strcpy(name, (char*)child_attr);
+		name = g_strdup((char*)child_attr);
 		xmlFree(child_attr);
 	}
 
@@ -350,18 +353,22 @@ static void handle_napdef(xmlNodePtr temp, xmlChar *ctype,
 		temp1 = temp1->next;
 	}
 
-	if (g_strcmp0(app_id,"w4") == 0)
-		prov_data->w4->apn = apn;
-	else if (g_strcmp0(app_id,"w2") == 0)
-		prov_data->w2->apn = apn;
-	else
+	if (g_strcmp0(app_id,"w4") == 0) {
+		g_free(prov_data_mms(prov_data)->apn);
+		prov_data_mms(prov_data)->apn = apn;
+	} else if (g_strcmp0(app_id,"w2") == 0) {
+		g_free(prov_data_internet(prov_data)->apn);
+		prov_data_internet(prov_data)->apn = apn;
+	} else
 		g_free(apn);
 
-	if (g_strcmp0(app_id,"w4") == 0)
-		prov_data->w4->name = name;
-	else if (g_strcmp0(app_id,"w2") == 0)
-		prov_data->w2->name = name;
-	else
+	if (g_strcmp0(app_id,"w4") == 0) {
+		g_free(prov_data_mms(prov_data)->name);
+		prov_data_mms(prov_data)->name = name;
+	} else if (g_strcmp0(app_id,"w2") == 0) {
+		g_free(prov_data_internet(prov_data)->name);
+		prov_data_internet(prov_data)->name = name;
+	} else
 		g_free(name);
 }
 
@@ -417,9 +424,8 @@ static void handle_w4_port(xmlNodePtr temp, xmlChar *ctype)
 
 	attr = parse_attribute(temp,(const xmlChar *)"PORTNBR");
 	if (attr != NULL) {
-		prov_data->w4->portnro =
-				g_try_new0(char, strlen((char *)attr) +1);
-		strcpy(prov_data->w4->portnro, (char*)attr);
+		g_free(prov_data_mms(prov_data)->portnro);
+		prov_data_mms(prov_data)->portnro = g_strdup((char *)attr);
 		xmlFree(attr);
 	}
 }
@@ -437,9 +443,8 @@ static void handle_w4_pxphysical(xmlNodePtr temp, xmlChar *ctype,
 	/*get proxy*/
 	attr = parse_attribute(temp,(const xmlChar *)"PXADDR");
 	if (attr != NULL) {
-		prov_data->w4->messageproxy = g_try_new0(char,
-						strlen((char *)attr) + 1);
-		strcpy(prov_data->w4->messageproxy, (char*)attr);
+		g_free(prov_data_mms(prov_data)->messageproxy);
+		prov_data_mms(prov_data)->messageproxy = g_strdup((char*)attr);
 		xmlFree(attr);
 	}
 
@@ -472,6 +477,7 @@ static void handle_w4_pxlogical(xmlNodePtr temp, xmlChar *ctype,
 		return;
 	}
 
+	xmlFree(attr);
 	LOG("handle_w4_pxlogical");
 	temp1 = temp->xmlChildrenNode;
 	while (temp1 != NULL) {
@@ -542,130 +548,48 @@ static void parse_w4(xmlNodePtr cur)
 		xmlFree(ctype);
 		temp = temp->next;
 	}
-
-
 }
 
-gboolean init_w2_data()
+static void provisioning_internet_free(struct provisioning_internet *internet)
 {
-	struct w2 *net;
-
-	net = g_try_new0(struct w2, 1);
-	if (net == NULL)
-		return FALSE;//-ENOMEM;
-
-	net->apn = NULL;
-	net->name = NULL;
-	net->password = NULL;
-	net->username = NULL;
-	prov_data->w2 = net;
-
-	return TRUE;
+    if (internet) {
+		g_free(internet->name);
+		g_free(internet->apn);
+		g_free(internet->username);
+		g_free(internet->password);
+        g_free(internet);
+    }
 }
 
-gboolean init_w4_data()
+static void provisioning_mms_free(struct provisioning_mms *mms)
 {
-	struct w4 *mms;
-
-	mms = g_try_new0(struct w4, 1);
-	if (mms == NULL)
-		return FALSE;//-ENOMEM;
-
-	mms->apn = NULL;
-	mms->name = NULL;
-
-	mms->username = NULL;
-	mms->password = NULL;
-	mms->messageproxy = NULL;
-	mms->messagecenter = NULL;
-
-	prov_data->w4 = mms;
-
-	return TRUE;
+    if (mms) {
+		g_free(mms->name);
+		g_free(mms->apn);
+		g_free(mms->username);
+		g_free(mms->password);
+		g_free(mms->messageproxy);
+		g_free(mms->messagecenter);
+        g_free(mms->portnro);
+        g_free(mms);
+    }
 }
 
-gboolean init_internet_data()
-{
-	struct internet *net;
-
-	net = g_try_new0(struct internet, 1);
-	if (net == NULL)
-		return FALSE;//-ENOMEM;
-
-	net->apn = NULL;
-	net->name = NULL;
-	net->username = NULL;
-	net->password = NULL;
-	prov_data->internet = net;
-
-	return TRUE;
-}
-
-gboolean init_provisioning_data()
-{
-
-	prov_data = g_try_new0(struct provisioning_data, 1);
-	if (prov_data == NULL)
-		return FALSE;//-ENOMEM;
-
-	prov_data->internet = NULL;
-	prov_data->w2 = NULL;
-	prov_data->w4 = NULL;
-
-	if (!init_internet_data())
-		return FALSE;
-	/*
-	 * TODO: This should probably be dynamic i.e. create a list here and
-	 * call init when needed and same goes with w2
-	 */
-	if (!init_w4_data())
-		return FALSE;
-
-	if (!init_w2_data())
-		return FALSE;
-
-	return TRUE;
-}
-
-void clean_provisioning_data()
+void provisioning_data_free(struct provisioning_data *data)
 {
 	LOG("clean_provisioning_data");
-	g_free(prov_data->internet->apn);
-	g_free(prov_data->internet->name);
-	g_free(prov_data->internet->username);
-	g_free(prov_data->internet->password);
-	g_free(prov_data->internet);
-	/*
-	 * As an example:
-	 * g_slist_free_full(prov_data->w2,g_free);
-	 * g_slist_free_full(prov_data->w4,g_free);
-	 */
-	g_free(prov_data->w2->apn);
-	g_free(prov_data->w2->name);
-	g_free(prov_data->w2->username);
-	g_free(prov_data->w2->password);
-	g_free(prov_data->w2);
-	g_free(prov_data->w4->apn);
-	g_free(prov_data->w4->name);
-	g_free(prov_data->w4->username);
-	g_free(prov_data->w4->password);
-	g_free(prov_data->w4->messageproxy);
-	g_free(prov_data->w4->messagecenter);
-	g_free(prov_data->w4->portnro);
-	g_free(prov_data->w4);
-	g_free(prov_data);
+	provisioning_internet_free(data->internet);
+	provisioning_mms_free(data->mms);
+	g_free(data);
 }
 
-int parse_xml_main(const char *document,int length)
+struct provisioning_data *parse_xml_main(const char *document,int length)
 {
 	xmlDocPtr doc;
 	xmlNodePtr cur;
 
 	LOG("enter parse_xml_main");
-	prov_data = NULL;
-
-	if(!init_provisioning_data())
-		return 0;
+	prov_data = g_new0(struct provisioning_data, 1);
 
 	doc = parse_xml_to_tree(document, length);
 
@@ -673,14 +597,16 @@ int parse_xml_main(const char *document,int length)
 	if (cur == NULL) {
 		LOG("empty document");
 		xmlFreeDoc(doc);
-		return 0;
+		provisioning_data_free(prov_data);
+		return NULL;
 	}
 
 	/*check document type*/
 	if (xmlStrcmp(cur->name, (const xmlChar *) "wap-provisioningdoc")) {
 		LOG("root node != wap-provisioningdoc");
 		xmlFreeDoc(doc);
-		return 0;
+		provisioning_data_free(prov_data);
+		return NULL;
 	}
 
 	cur = cur->xmlChildrenNode;
@@ -699,5 +625,14 @@ int parse_xml_main(const char *document,int length)
 	xmlCleanupParser();
 
 	LOG("exit parse_xml_main");
-	return 1;
+	return prov_data;
 }
+
+/*
+ * Local Variables:
+ * mode: C
+ * tab-width: 4
+ * c-basic-offset: 4
+ * indent-tabs-mode: t
+ * End:
+ */
