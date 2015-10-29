@@ -23,8 +23,7 @@ SRC = \
  log.c \
  main.c \
  provisioning-decoder.c \
- provisioning-ofono.c \
- provisioning-xml-parser.c
+ provisioning-ofono.c
 GEN_SRC = \
  org.nemomobile.provisioning.c
 

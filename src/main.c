@@ -121,9 +121,18 @@ handle_message(
 	int len)
 {
 	struct provisioning_data *prov_data;
+
 #ifdef FILEWRITE
-	print_to_file(msg, len, "received_wbxml");
+	GError *error = NULL;
+	const char *path = FILEWRITE "/received_wbxml";
+	if (g_file_set_contents(path, msg, len, &error)) {
+		LOG("wrote file: %s len: %d", path, len);
+	} else {
+		LOG("%s: %s", path, error->message);
+		g_error_free(error);
+	}
 #endif
+
 	LOG("handle_message %s %d bytes", imsi, len);
 	prov_data = decode_provisioning_wbxml(msg, len);
 	if (prov_data) {

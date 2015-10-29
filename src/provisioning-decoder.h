@@ -20,14 +20,53 @@
 
 #include <glib.h>
 
+enum prov_authtype {
+	AUTH_UNKNOWN = 0,
+	AUTH_PAP,
+	AUTH_CHAP,
+	AUTH_MD5
+};
+
+struct provisioning_data {
+	struct provisioning_internet *internet;
+	struct provisioning_mms *mms;
+};
+
+struct provisioning_internet {
+	char *name;
+	char *apn;
+	char *username;
+	char *password;
+	enum prov_authtype authtype;
+};
+
+struct provisioning_mms {
+	char *name;
+	char *apn;
+	char *username;
+	char *password;
+	char *messageproxy;
+	char *messagecenter;
+	char *portnro;
+	enum prov_authtype authtype;
+};
+
 struct provisioning_data *
 decode_provisioning_wbxml(
-	const guint8 *array,
-	int array_len);
+	const guint8 *bytes,
+	int len);
 
-#ifdef FILEWRITE
-/*used for testing*/
-void print_to_file(const void *data, int len, const char *file);
-#endif
+void
+provisioning_data_free(
+	struct provisioning_data *data);
 
 #endif /* __PROVSERVICEDECODER_H */
+
+/*
+ * Local Variables:
+ * mode: C
+ * tab-width: 4
+ * c-basic-offset: 4
+ * indent-tabs-mode: t
+ * End:
+ */
