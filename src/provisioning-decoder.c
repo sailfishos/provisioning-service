@@ -23,7 +23,7 @@
 #include <string.h>
 #include "log.h"
 
-struct provisioning_data *decode_provisioning_wbxml(const char *array,
+struct provisioning_data *decode_provisioning_wbxml(const guint8 *array,
 								int array_len)
 {
 	struct provisioning_data * result = NULL;

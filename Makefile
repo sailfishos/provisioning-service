@@ -6,7 +6,7 @@
 # Required packages
 #
 
-PKGS = glib-2.0 dbus-1 libwbxml2 libgofono libglibutil
+PKGS = gio-unix-2.0 glib-2.0 dbus-1 libwbxml2 libgofono libglibutil
 LIB_PKGS = $(PKGS)
 
 #
@@ -24,9 +24,9 @@ SRC = \
  main.c \
  provisioning-decoder.c \
  provisioning-ofono.c \
- provisioning-receiver.c \
  provisioning-xml-parser.c
-GEN_SRC =
+GEN_SRC = \
+ org.nemomobile.provisioning.c
 
 #
 # Directories
@@ -34,7 +34,7 @@ GEN_SRC =
 
 SRC_DIR = src
 BUILD_DIR = build
-SPEC_DIR = src
+SPEC_DIR = .
 GEN_DIR = $(BUILD_DIR)
 DEBUG_BUILD_DIR = $(BUILD_DIR)/debug
 RELEASE_BUILD_DIR = $(BUILD_DIR)/release
@@ -46,7 +46,7 @@ RELEASE_BUILD_DIR = $(BUILD_DIR)/release
 CC = $(CROSS_COMPILE)gcc
 LD = $(CC)
 WARNINGS = -Wall -Wno-unused-parameter
-INCLUDES = -I$(INCLUDE_DIR) -I$(GEN_DIR)
+INCLUDES = -I. -I$(GEN_DIR)
 BASE_FLAGS = -fPIC $(CFLAGS)
 FULL_CFLAGS = $(BASE_FLAGS) $(DEFINES) $(WARNINGS) $(INCLUDES) -MMD -MP \
   $(shell pkg-config --cflags $(PKGS))
@@ -110,6 +110,8 @@ $(RELEASE_OBJS): | $(RELEASE_BUILD_DIR)
 EXE = provisioning-service
 DEBUG_EXE = $(DEBUG_BUILD_DIR)/$(EXE)
 RELEASE_EXE = $(RELEASE_BUILD_DIR)/$(EXE)
+
+generate: $(GEN_FILES)
 
 debug: $(DEBUG_DEPS) $(DEBUG_EXE)
 

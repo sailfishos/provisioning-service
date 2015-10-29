@@ -18,9 +18,11 @@
 #ifndef __PROVSERVICEDECODER_H
 #define __PROVSERVICEDECODER_H
 
+#include <glib.h>
+
 struct provisioning_data *
 decode_provisioning_wbxml(
-	const char *array,
+	const guint8 *array,
 	int array_len);
 
 #ifdef FILEWRITE

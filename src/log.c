@@ -12,10 +12,6 @@
 #include <gofono_types.h>
 #include <stdlib.h>
 
-#define LOGJOURNAL 0x01
-#define LOGSTDOUT 0x02
-#define LOGSTDERR 0x03
-
 GLOG_MODULE_DEFINE("provisioning");
 
 /*
