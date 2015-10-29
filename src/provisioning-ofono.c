@@ -27,7 +27,7 @@
 
 #include "log.h"
 #include "provisioning-ofono.h"
-#include "provisioning-xml-parser.h"
+#include "provisioning-decoder.h"
 
 #define PROVISIONING_TIMEOUT 30 /* sec */
 
@@ -45,7 +45,9 @@ enum provisioning_context_property {
 	PROV_PROPERTY_APN,
 	PROV_PROPERTY_USERNAME,
 	PROV_PROPERTY_PASSWORD,
+	PROV_PROPERTY_AUTH,
 	PROV_PROPERTY_INTERNET_COUNT,
+	/* Below are MMS specific properties */
 	PROV_PROPERTY_MMS_PROXY = PROV_PROPERTY_INTERNET_COUNT,
 	PROV_PROPERTY_MMS_CENTER,
 	PROV_PROPERTY_MMS_COUNT
@@ -286,6 +288,10 @@ provisioning_context_set_internet_properties(
 			OFONO_CONNCTX_PROPERTY_USERNAME, internet->username);
 		provisioning_context_request_submit(ctx, PROV_PROPERTY_PASSWORD,
 			OFONO_CONNCTX_PROPERTY_PASSWORD, internet->password);
+		provisioning_context_request_submit(ctx, PROV_PROPERTY_AUTH,
+			OFONO_CONNCTX_PROPERTY_AUTH, ofono_connctx_auth_string(
+			(internet->authtype == AUTH_PAP) ?
+			OFONO_CONNCTX_AUTH_PAP : OFONO_CONNCTX_AUTH_CHAP));
 	}
 }
 
@@ -304,6 +310,10 @@ provisioning_context_set_mms_properties(
 			OFONO_CONNCTX_PROPERTY_USERNAME, mms->username);
 		provisioning_context_request_submit(ctx, PROV_PROPERTY_PASSWORD,
 			OFONO_CONNCTX_PROPERTY_PASSWORD, mms->password);
+		provisioning_context_request_submit(ctx, PROV_PROPERTY_AUTH,
+			OFONO_CONNCTX_PROPERTY_AUTH, ofono_connctx_auth_string(
+			(mms->authtype == AUTH_PAP) ?
+			OFONO_CONNCTX_AUTH_PAP : OFONO_CONNCTX_AUTH_CHAP));
 		provisioning_context_request_submit(ctx, PROV_PROPERTY_MMS_CENTER,
 			OFONO_CONNCTX_PROPERTY_MMS_CENTER, mms->messagecenter);
 		if (mms->messageproxy && mms->messageproxy[0] &&

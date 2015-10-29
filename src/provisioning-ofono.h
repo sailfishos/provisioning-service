@@ -23,8 +23,8 @@ struct provisioning_data;
 
 enum prov_result {
 	PROV_SUCCESS = 0,
-	PROV_PARTIAL_SUCCESS = 1,
-	PROV_FAILURE = 2,
+	PROV_PARTIAL_SUCCESS,
+	PROV_FAILURE
 };
 
 void

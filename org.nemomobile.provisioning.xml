@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE node PUBLIC
+  "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+  "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+<node>
+  <interface name="org.nemomobile.provisioning.interface">
+    <method name="HandleProvisioningMessage">
+      <arg type="s" name="imsi" direction="in"/>
+      <arg type="s" name="from" direction="in"/>
+      <arg type="u" name="remote_time" direction="in"/>
+      <arg type="u" name="local_time" direction="in"/>
+      <arg type="i" name="dst_port" direction="in"/>
+      <arg type="i" name="src_port" direction="in"/>
+      <arg type="s" name="content_type" direction="in"/>
+      <arg type="ay" name="data" direction="in">
+        <annotation name="org.gtk.GDBus.C.ForceGVariant" value="true"/>
+      </arg>
+    </method>
+    <signal name="apnProvisioningSucceeded"/>
+    <signal name="apnProvisioningPartiallySucceeded"/>
+    <signal name="apnProvisioningFailed"/>
+  </interface>
+</node>

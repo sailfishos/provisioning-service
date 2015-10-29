@@ -24,10 +24,15 @@
 #include <gutil_log.h>
 
 /* Initializes logger */
+
+#define LOGJOURNAL 0x01
+#define LOGSTDOUT 0x02
+#define LOGSTDERR 0x03
+
 extern void initlog(int target);
 
 /* Prototype for log implementation function */
-extern void prov_debug(const char *format, ...);
+extern void prov_debug(const char *format, ...) G_GNUC_PRINTF(1,2);
 
 #define LOG(fmt, args...) { \
 		prov_debug(fmt, ## args); \

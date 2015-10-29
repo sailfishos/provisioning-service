@@ -16,24 +16,30 @@
  *
  */
 
-#include <string.h>
-#include <glib.h>
-#include <dbus/dbus.h>
-#include "provisioning.h"
-#include "log.h"
-#include "provisioning-receiver.h"
 #include "provisioning-decoder.h"
 #include "provisioning-ofono.h"
+#include "log.h"
+
+/* Generated code */
+#include "org.nemomobile.provisioning.h"
 
 #define PROVISIONING_SERVICE "org.nemomobile.provisioning"
 #define PROVISIONING_SERVICE_INTERFACE "org.nemomobile.provisioning.interface"
 #define PROVISIONING_SERVICE_PATH "/"
+#define PROVISIONING_CONTENT_TYPE "application/vnd.wap.connectivity-wbxml"
+#define PROVISIONING_BUS G_BUS_TYPE_SYSTEM
 
 static guint exit_timeout_id;
 static GMainLoop *loop;
+static GDBusConnection *dbus_connection;
+static OrgNemomobileProvisioningInterface *provisioning_proxy;
 static int pending_count;
+static gulong handle_message_id;
 
-static gboolean handle_exit(gpointer data)
+static
+gboolean
+handle_exit(
+	gpointer data)
 {
 	exit_timeout_id = 0;
 	LOG("provisioning_exit");
@@ -41,7 +47,9 @@ static gboolean handle_exit(gpointer data)
 	return FALSE;
 }
 
-static void cancel_exit()
+static
+void
+cancel_exit(void)
 {
 	if (exit_timeout_id) {
 		g_source_remove(exit_timeout_id);
@@ -49,7 +57,9 @@ static void cancel_exit()
 	}
 }
 
-static void schedule_exit()
+static
+void
+schedule_exit(void)
 {
 	cancel_exit();
 	if (!pending_count) {
@@ -57,41 +67,45 @@ static void schedule_exit()
 	}
 }
 
-static void send_signal(enum prov_result message)
+static
+void
+provisioning_proxy_destroy(void)
 {
-	DBusConnection *conn = provisioning_dbus_get_connection();
-	DBusMessage *msg;
-	const char *name;
-
-	switch (message) {
-	case PROV_SUCCESS:
-		name = "apnProvisioningSucceeded";
-		break;
-	case PROV_PARTIAL_SUCCESS:
-		name = "apnProvisioningPartiallySucceeded";
-		break;
-	default:
-		name = "apnProvisioningFailed";
-		break;
+	if (provisioning_proxy) {
+        g_signal_handler_disconnect(provisioning_proxy, handle_message_id);
+        g_dbus_interface_skeleton_unexport(
+            G_DBUS_INTERFACE_SKELETON(provisioning_proxy));
+		g_object_unref(provisioning_proxy);
+		provisioning_proxy = NULL;
 	}
-
-	LOG("send_signal %s", name);
-	msg = dbus_message_new_signal(PROVISIONING_SERVICE_PATH, // object name of the signal
-					PROVISIONING_SERVICE_INTERFACE, // interface name of the signal
-					name); // name of the signal
-
-	if (msg == NULL)
-		goto out;
-
-	if (!dbus_connection_send(conn, msg, NULL))
-		goto out;
-
-	dbus_connection_flush(conn);
-out:
-	dbus_message_unref(msg);
 }
 
-static void provisioning_done(enum prov_result result, void *param)
+static
+void
+send_signal(
+	enum prov_result result)
+{
+	LOG("send_signal %d", result);
+	if (provisioning_proxy) {
+		switch (result) {
+		case PROV_SUCCESS:
+			org_nemomobile_provisioning_interface_emit_apn_provisioning_succeeded(provisioning_proxy);
+			break;
+		case PROV_PARTIAL_SUCCESS:
+			org_nemomobile_provisioning_interface_emit_apn_provisioning_partially_succeeded(provisioning_proxy);
+			break;
+		default:
+			org_nemomobile_provisioning_interface_emit_apn_provisioning_failed(provisioning_proxy);
+			break;
+		}
+	}
+}
+
+static
+void
+provisioning_done(
+	enum prov_result result,
+	void *param)
 {
 	LOG("Provisioning result %d", result);
 	send_signal(result);
@@ -99,139 +113,149 @@ static void provisioning_done(enum prov_result result, void *param)
 	schedule_exit();
 }
 
-static gboolean handle_message(const char *imsi, const char *msg, int len)
+static
+gboolean
+handle_message(
+	const char *imsi,
+	const guint8 *msg,
+	int len)
 {
 	struct provisioning_data *prov_data;
-	LOG("handle_message %s %d bytes", imsi, len);
-
-	if (len < 0)
-		goto error;
 
 #ifdef FILEWRITE
-	print_to_file(msg, len, "received_wbxml");
+	GError *error = NULL;
+	const char *path = FILEWRITE "/received_wbxml";
+	if (g_file_set_contents(path, msg, len, &error)) {
+		LOG("wrote file: %s len: %d", path, len);
+	} else {
+		LOG("%s: %s", path, error->message);
+		g_error_free(error);
+	}
 #endif
 
+	LOG("handle_message %s %d bytes", imsi, len);
 	prov_data = decode_provisioning_wbxml(msg, len);
 	if (prov_data) {
 		cancel_exit();
 		pending_count++;
 		provisioning_ofono(imsi, prov_data, provisioning_done, NULL);
+		return TRUE;
 	} else {
-		send_signal(PROV_FAILURE);
-		goto error;
+		return FALSE;
 	}
-
-	LOG("provisioning_handle_message: SUCCESS");
-	return TRUE;
-
-error:
-	schedule_exit();
-	return FALSE;
 }
 
-static DBusMessage *provisioning_handle_message(DBusConnection *conn,
-					DBusMessage *msg, void *data)
+static
+gboolean
+provisioning_handle_push_message(
+	OrgNemomobileProvisioningInterface *proxy,
+	GDBusMethodInvocation *call,
+	const char *imsi,
+	const char *from,
+	guint32 remote_time,
+	guint32 local_time,
+	int dst_port,
+	int src_port,
+	const char *type,
+	GVariant *data,
+	void *user_data)
 {
-	char *array; /* Byte array containing client request*/
-	int array_len; /* Length of request byte array */
-	DBusMessageIter iter;
-	DBusMessageIter subiter;
-	const char *imsi = NULL;
-
-	LOG("provisioning_handle_message");
-
-	dbus_message_iter_init(msg, &iter);
-
-	if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_STRING)
-		goto error;
-
-	dbus_message_iter_get_basic(&iter, &imsi);
-	dbus_message_iter_next(&iter);
-
-	/* Skip the parts we are not interested in */
-	dbus_message_iter_next(&iter);	// 's'
-	dbus_message_iter_next(&iter);	// 'u'
-	dbus_message_iter_next(&iter);	// 'u'
-	dbus_message_iter_next(&iter);	// 'i'
-	dbus_message_iter_next(&iter);	// 'i'
-	dbus_message_iter_next(&iter);	// 's'
-
-	if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_ARRAY)
-		goto error;
-
-	if (dbus_message_iter_get_element_type(&iter) != DBUS_TYPE_BYTE) {
-		LOG("Ignoring dbus request because request element type=%c",
-			dbus_message_iter_get_element_type(&iter));
-		goto error;
+	gsize len = 0;
+	const guint8* bytes = g_variant_get_fixed_array(data, &len, 1);
+	if (!imsi || !imsi[0]) {
+		GERR("Missing IMSI");
+		g_dbus_method_invocation_return_error(call, G_DBUS_ERROR,
+			G_DBUS_ERROR_FAILED, "Missing IMSI");
+	} else if (!bytes || !len) {
+		GERR("Missing provisioning data");
+		g_dbus_method_invocation_return_error(call, G_DBUS_ERROR,
+			G_DBUS_ERROR_FAILED, "Missing provisioning data");
+    } else if (!type || !type[0]) {
+        GERR("Missing content type");
+		g_dbus_method_invocation_return_error(call, G_DBUS_ERROR,
+			G_DBUS_ERROR_FAILED, "Missing content type");
+    } else if (g_ascii_strcasecmp(type, PROVISIONING_CONTENT_TYPE)) {
+        GERR("Unexpected content type %s", type);
+		g_dbus_method_invocation_return_error(call, G_DBUS_ERROR,
+			G_DBUS_ERROR_FAILED, "Unexpected content type");
+	} else {
+		if (!handle_message(imsi, bytes, len)) {
+			send_signal(PROV_FAILURE);
+			schedule_exit();
+		}
+		org_nemomobile_provisioning_interface_complete_handle_provisioning_message(proxy, call);
 	}
-
-	dbus_message_iter_recurse(&iter, &subiter);
-
-	dbus_message_iter_get_fixed_array(&subiter, &array, &array_len);
-
-	handle_message(imsi, array, array_len);
-	return NULL;
-
-error:
-	schedule_exit();
-	return NULL;
+    return TRUE;
 }
 
-static const GDBusMethodTable provisioning_methods[] = {
-	{ GDBUS_METHOD("HandleProvisioningMessage",
-			GDBUS_ARGS({ "provisioning_message", "ssuuiisay" }),
-			NULL, provisioning_handle_message) },
-	{ }
-};
-
-static const GDBusSignalTable provisioning_signals[] = {
-	{ GDBUS_SIGNAL("apnProvisioningSucceeded", NULL) },
-	{ GDBUS_SIGNAL("apnProvisioningPartiallySucceeded", NULL) },
-	{ GDBUS_SIGNAL("apnProvisioningFailed", NULL) },
-	{ }
-};
-
-static gboolean provisioning_init(void)
+static
+void
+provisioning_dbus_ready(
+	GDBusConnection* bus,
+	const gchar* name,
+	gpointer arg)
 {
-	DBusConnection *conn = provisioning_dbus_get_connection();
-	gboolean ret;
-
-	LOG("provisioning_init:%p",conn);
-	ret = register_dbus_interface(conn, PROVISIONING_SERVICE_PATH,
-					PROVISIONING_SERVICE_INTERFACE,
-					provisioning_methods,
-					provisioning_signals,
-					NULL, NULL);
-
-	return ret;
+	GError* error = NULL;
+	LOG("Bus acquired");
+	GASSERT(!provisioning_proxy);
+	GASSERT(!dbus_connection);
+	g_object_ref(dbus_connection = bus);
+	provisioning_proxy = org_nemomobile_provisioning_interface_skeleton_new();
+	if (g_dbus_interface_skeleton_export(
+	    G_DBUS_INTERFACE_SKELETON(provisioning_proxy), bus,
+	    PROVISIONING_SERVICE_PATH, &error)) {
+		handle_message_id = g_signal_connect(provisioning_proxy,
+			"handle-handle-provisioning-message",
+			G_CALLBACK(provisioning_handle_push_message), NULL);
+	} else {
+		GERR("Could not start: %s", GERRMSG(error));
+		g_error_free(error);
+		g_object_unref(provisioning_proxy);
+		provisioning_proxy = NULL;
+	}
 }
 
-static void provisioning_cleanup(void)
+static
+void
+provisioning_dbus_name_acquired(
+	GDBusConnection* bus,
+	const gchar* name,
+	gpointer arg)
 {
-	DBusConnection *conn = provisioning_dbus_get_connection();
-
-	unregister_dbus_interface(conn, PROVISIONING_SERVICE_PATH,
-					PROVISIONING_SERVICE_INTERFACE);
+	LOG("Acquired service name '%s'", name);
 }
 
-static gint debug_target = 0;
+static
+void
+provisioning_dbus_name_lost(
+	GDBusConnection* bus,
+	const gchar* name,
+	gpointer arg)
+{
+	GERR("'%s' service already running or access denied", name);
+	g_main_loop_quit(loop);
+}
+
+static gint log_target = 0;
+static gboolean debug = 0;
 
 static GOptionEntry entries[] = {
-	{ "debug", 'd', 0,G_OPTION_ARG_INT, &debug_target,
-				"Options: 1(system logger) 2(stdout) 3(stderr)",
-				"1..3" },
+	{ "log", 'l', 0,G_OPTION_ARG_INT, &log_target,
+	  "Options: 1(system logger) 2(stdout) 3(stderr)", "1..3" },
+	{ "timestamp", 't', 0, G_OPTION_ARG_NONE, &gutil_log_timestamp,
+	  "Add timestamps to debug log", NULL },
+	{ "debug", 'd', 0, G_OPTION_ARG_NONE, &debug,
+	  "Disable start timeout for debugging", NULL },
 	{ NULL },
 };
 
-int main( int argc, char **argv )
+int main(int argc, char **argv)
 {
-	GOptionContext *context;
+	guint name_id;
 	GError *error = NULL;
-	DBusConnection* conn;
-	DBusError err;
+	GOptionContext *context = g_option_context_new(NULL);
 
-	context = g_option_context_new(NULL);
-
+	gutil_log_timestamp = FALSE;
 	g_option_context_add_main_entries(context, entries, NULL);
 	if (g_option_context_parse(context, &argc, &argv, &error) == FALSE) {
 		if (error != NULL) {
@@ -246,40 +270,37 @@ int main( int argc, char **argv )
 
 	g_option_context_free(context);
 
-	initlog(debug_target);
-	LOG("provisioning main");
+	/* Turn logging on if debugging is enabled */
+	if (debug && !log_target) log_target = LOGSTDOUT;
+	initlog(log_target);
+	LOG("Starting");
+
+	/* Acquire name, don't allow replacement */
+	name_id = g_bus_own_name(PROVISIONING_BUS, PROVISIONING_SERVICE,
+		G_BUS_NAME_OWNER_FLAGS_REPLACE, provisioning_dbus_ready,
+		provisioning_dbus_name_acquired, provisioning_dbus_name_lost,
+		NULL, NULL);
 
 	loop = g_main_loop_new(NULL, FALSE);
 
-	dbus_error_init(&err);
-	/* connect to the bus and check for errors. */
-	conn = setup_dbus_bus(DBUS_BUS_SYSTEM, PROVISIONING_SERVICE, &err);
-	if (conn == NULL) {
-		if (dbus_error_is_set(&err) == TRUE) {
-			LOG("Unable to hop onto D-Bus: %s",
-					err.message);
-			dbus_error_free(&err);
-		} else {
-			LOG("Unable to hop onto D-Bus");
-		}
-
-		goto cleanup;
+	/* Exit in 30 seconds if nothing is happening */
+	if (!debug) {
+		exit_timeout_id = g_timeout_add_seconds(30, handle_exit, 0);
 	}
 
-	dbus_provisioning_set_connection(conn);
-	if(!provisioning_init())
-		LOG("provisioning_init failed!");
-
-	/* Exit in 30 seconds if nothing is happening */
-	exit_timeout_id = g_timeout_add_seconds(30, handle_exit, NULL);
+	/* Run the main loop */
 	g_main_loop_run(loop);
-
-	provisioning_cleanup();
-	LOG("provisioning main exit");
-	dbus_provisioning_set_connection(NULL);
-	dbus_connection_unref(conn);
-cleanup:
 	g_main_loop_unref(loop);
+
+	/* Cleanup */
+	provisioning_proxy_destroy();
+	g_bus_unown_name(name_id);
+	if (dbus_connection) {
+		g_dbus_connection_flush_sync(dbus_connection, NULL, NULL);
+		g_object_unref(dbus_connection);
+	}
+
+	LOG("Exiting");
 	return 0;
 
 }

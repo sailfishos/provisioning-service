@@ -38,16 +38,20 @@ if __name__ == '__main__':
 	provisioning.connect_to_signal("apnProvisioningFailed",
 					ApnProvisioningFailed)
 
-	s1 = dbus.String("")
+	if (len(sys.argv) > 1):
+		s1 = dbus.String(sys.argv[1])
+	else:
+		s1 = dbus.String("")
+
 	s2 = dbus.String("")
 	u1 = dbus.UInt32(0)
 	u2 = dbus.UInt32(0)
 	i1 = int(0)
 	i2 = int(0)
-	s3 = dbus.String("")
+	s3 = dbus.String("application/vnd.wap.connectivity-wbxml")
 
-	if (len(sys.argv) == 2):
-		file = sys.argv[1]
+	if (len(sys.argv) > 2):
+		file = sys.argv[2]
 	else:
 		file = 'prov.wbxml'
 

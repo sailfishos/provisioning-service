@@ -20,6 +20,7 @@ A service for handling over-the-air (OTA) provisioning messages
 %setup -q -n %{name}-%{version}
 
 %build
+make generate
 make %{?_smp_mflags} KEEP_SYMBOLS=1 release
 
 %install
