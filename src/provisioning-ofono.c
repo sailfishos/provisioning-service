@@ -237,7 +237,7 @@ provisioning_property_request_done(
 		ctx->state = PROV_CONTEXT_ERROR;
 	}
 	if (!ctx->outstanding_requests) {
-		/* Last request */
+		/* Last request has been completed */
 		if (ctx->state == PROV_CONTEXT_PROVISIONING) {
 			ctx->state = PROV_CONTEXT_SUCCESS;
 		}
@@ -411,6 +411,10 @@ void
 provisioning_connmgr_valid(
 	struct provisioning_sim *sim)
 {
+	/* Jolla fork of ofono makes sure that there's always one internet and
+	 * one mms context. In a more general case it may be necessary to create
+	 * contexts if they don't exist.
+	 */
 	struct provisioning_ofono *ofono = sim->ofono;
 	if (ofono->data->internet &&
 	    ofono->data->internet->apn &&
