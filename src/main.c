@@ -20,6 +20,8 @@
 #include "provisioning-ofono.h"
 #include "log.h"
 
+#include <errno.h>
+
 /* Generated code */
 #include "org.nemomobile.provisioning.h"
 
@@ -29,7 +31,12 @@
 #define PROVISIONING_CONTENT_TYPE "application/vnd.wap.connectivity-wbxml"
 #define PROVISIONING_BUS G_BUS_TYPE_SYSTEM
 
+#ifndef PROV_MAX_SAVE_FILES
+#  define PROV_MAX_SAVE_FILES (1000)
+#endif
+
 static guint exit_timeout_id;
+static char *save_dir;
 static GMainLoop *loop;
 static GDBusConnection *dbus_connection;
 static OrgNemomobileProvisioningInterface *provisioning_proxy;
@@ -122,18 +129,27 @@ handle_message(
 {
 	struct provisioning_data *prov_data;
 
-#ifdef FILEWRITE
-	GError *error = NULL;
-	const char *path = FILEWRITE "/received_wbxml";
-	if (g_file_set_contents(path, (void*)msg, len, &error)) {
-		LOG("wrote file: %s len: %d", path, len);
-	} else {
-		LOG("%s: %s", path, error->message);
-		g_error_free(error);
-	}
-#endif
-
 	LOG("handle_message %s %d bytes", imsi, len);
+
+	if (save_dir && g_file_test(save_dir, G_FILE_TEST_IS_DIR)) {
+		int i;
+		GString *path = g_string_new(NULL);
+		for (i=0; i<=PROV_MAX_SAVE_FILES; i++) {
+			g_string_printf(path, "%s/provision_%04x.dat", save_dir, i);
+			if (!g_file_test(path->str, G_FILE_TEST_EXISTS)) {
+				GError *error = NULL;
+				if (g_file_set_contents(path->str, (void*)msg, len, &error)) {
+					GINFO("wrote %s", path->str);
+				} else {
+					GWARN("%s: %s", path->str, error->message);
+					g_error_free(error);
+				}
+				break;
+			}
+		}
+		g_string_free(path, TRUE);
+	}
+
 	prov_data = decode_provisioning_wbxml(msg, len);
 	if (prov_data) {
 		cancel_exit();
@@ -246,6 +262,8 @@ static GOptionEntry entries[] = {
 	  "Add timestamps to debug log", NULL },
 	{ "debug", 'd', 0, G_OPTION_ARG_NONE, &debug,
 	  "Disable start timeout for debugging", NULL },
+	{ "save-dir", 's', 0, G_OPTION_ARG_STRING, &save_dir,
+	  "Save received messages to DIR", "DIR" },
 	{ NULL },
 };
 
@@ -274,6 +292,13 @@ int main(int argc, char **argv)
 	if (debug && !log_target) log_target = LOGSTDOUT;
 	initlog(log_target);
 	LOG("Starting");
+
+	/* Create file storage directory */
+	if (save_dir) {
+		if (g_mkdir_with_parents(save_dir, 0755) < 0) {
+			GWARN("Error creating %s: %s", save_dir, strerror(errno));
+		}
+	}
 
 	/* Acquire name, don't allow replacement */
 	name_id = g_bus_own_name(PROVISIONING_BUS, PROVISIONING_SERVICE,
