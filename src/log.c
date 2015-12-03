@@ -43,7 +43,7 @@ void initlog(int target)
 			break;
 		}
 	} else {
-		GLOG_MODULE_NAME.level = GLOG_LEVEL_ERR;
+		GLOG_MODULE_NAME.level = GLOG_LEVEL_INFO;
 		gofono_log.level = GLOG_LEVEL_ERR;
 	}
 }
