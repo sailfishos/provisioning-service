@@ -59,7 +59,7 @@ struct provisioning_ofono {
 	OfonoManager *manager;
 	gulong manager_valid_id;
 	guint timeout_id;
-	void (*done)(enum prov_result result, void *param);
+	provisioning_ofono_cb_t done;
 	void *param;
 	GSList *sim_list;
 };
@@ -156,10 +156,11 @@ static
 void
 provisioning_ofono_done(
 	struct provisioning_ofono *ofono,
+	const char *path,
 	enum prov_result result)
 {
 	if (ofono->done) {
-		ofono->done(result, ofono->param);
+		ofono->done(ofono->imsi, path, result, ofono->param);
 		ofono->done = NULL;
 	}
 	if (ofono->timeout_id) {
@@ -181,7 +182,7 @@ provisioning_ofono_timeout(
 	struct provisioning_ofono *ofono = data;
 	LOG("Timeout trying to provision %s", ofono->imsi);
 	ofono->timeout_id = 0;
-	provisioning_ofono_done(ofono, PROV_FAILURE);
+	provisioning_ofono_done(ofono, NULL, PROV_FAILURE);
 	return FALSE;
 }
 
@@ -211,6 +212,7 @@ provisioning_sim_check(
 			}
 		}
 		provisioning_ofono_done(sim->ofono,
+			ofono_simmgr_path(sim->simmgr),
 			(context_count && success_count == context_count) ? PROV_SUCCESS :
 			(error_count == context_count) ? PROV_FAILURE :
 			PROV_PARTIAL_SUCCESS);
@@ -549,7 +551,7 @@ void
 provisioning_ofono(
 	const char *imsi,
 	struct provisioning_data *data,
-	void (*done)(enum prov_result result, void *param),
+	provisioning_ofono_cb_t done,
 	void *param)
 {
 	struct provisioning_ofono *ofono = g_new0(struct provisioning_ofono, 1);

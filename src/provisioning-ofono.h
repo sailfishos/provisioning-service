@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2014-2015 Jolla Ltd.
+ *  Copyright (C) 2014-2016 Jolla Ltd.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 2 as
@@ -27,11 +27,19 @@ enum prov_result {
 	PROV_FAILURE
 };
 
+typedef
+void
+(*provisioning_ofono_cb_t)(
+	const char *imsi,
+	const char *path,
+	enum prov_result result,
+	void *param);
+
 void
 provisioning_ofono(
 	const char *imsi,
 	struct provisioning_data *data,
-	void (*done)(enum prov_result result, void *param),
+	provisioning_ofono_cb_t done,
 	void *param);
 
 #endif /* __PROVOFONO_H */
