@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2014-2015 Jolla Ltd.
+ *  Copyright (C) 2014-2016 Jolla Ltd.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 2 as
@@ -164,9 +164,6 @@ provisioning_ofono_done(
 	}
 	if (ofono->timeout_id) {
 		g_source_remove(ofono->timeout_id);
-	}
-	if (ofono->done) {
-		ofono->done(PROV_FAILURE, ofono->param);
 	}
 	ofono_manager_remove_handler(ofono->manager, ofono->manager_valid_id);
 	ofono_manager_unref(ofono->manager);
