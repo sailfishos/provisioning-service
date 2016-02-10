@@ -7,18 +7,18 @@ import dbus
 import dbus.mainloop.glib
 from dbus import ByteArray
 
-def ApnProvisioningSucceeded():
-	print "apnProvisioningSucceeded."
+def ApnProvisioningSucceeded(imsi,path):
+	print "apnProvisioningSucceeded",imsi,path
 	if canexit:
 		mainloop.quit()
 
-def ApnProvisioningPartiallySucceeded():
-	print "apnProvisioningPartiallySucceeded."
+def ApnProvisioningPartiallySucceeded(imsi,path):
+	print "apnProvisioningPartiallySucceeded",imsi,path
 	if canexit:
 		mainloop.quit()
 
-def ApnProvisioningFailed():
-	print "apnProvisioningFailed."
+def ApnProvisioningFailed(imsi,path):
+	print "apnProvisioningFailed",imsi,path
 	if canexit:
 		mainloop.quit()
 

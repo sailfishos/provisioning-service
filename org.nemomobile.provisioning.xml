@@ -16,8 +16,17 @@
         <annotation name="org.gtk.GDBus.C.ForceGVariant" value="true"/>
       </arg>
     </method>
-    <signal name="apnProvisioningSucceeded"/>
-    <signal name="apnProvisioningPartiallySucceeded"/>
-    <signal name="apnProvisioningFailed"/>
+    <signal name="apnProvisioningSucceeded">
+      <arg name="imsi" type="s"/>
+      <arg name="path" type="s"/>
+    </signal>
+    <signal name="apnProvisioningPartiallySucceeded">
+      <arg name="imsi" type="s"/>
+      <arg name="path" type="s"/>
+    </signal>
+    <signal name="apnProvisioningFailed">
+      <arg name="imsi" type="s"/>
+      <arg name="path" type="s"/>
+    </signal>
   </interface>
 </node>

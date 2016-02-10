@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2014-2015 Jolla Ltd.
+ *  Copyright (C) 2014-2016 Jolla Ltd.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 2 as
@@ -90,19 +90,26 @@ provisioning_proxy_destroy(void)
 static
 void
 send_signal(
+	const char *imsi,
+	const char *path,
 	enum prov_result result)
 {
-	LOG("send_signal %d", result);
+	LOG("send_signal %s %d", imsi, result);
 	if (provisioning_proxy) {
+		if (!imsi) imsi = "";
+		if (!path) path = "";
 		switch (result) {
 		case PROV_SUCCESS:
-			org_nemomobile_provisioning_interface_emit_apn_provisioning_succeeded(provisioning_proxy);
+			org_nemomobile_provisioning_interface_emit_apn_provisioning_succeeded(
+				provisioning_proxy, imsi, path);
 			break;
 		case PROV_PARTIAL_SUCCESS:
-			org_nemomobile_provisioning_interface_emit_apn_provisioning_partially_succeeded(provisioning_proxy);
+			org_nemomobile_provisioning_interface_emit_apn_provisioning_partially_succeeded(
+				provisioning_proxy, imsi, path);
 			break;
 		default:
-			org_nemomobile_provisioning_interface_emit_apn_provisioning_failed(provisioning_proxy);
+			org_nemomobile_provisioning_interface_emit_apn_provisioning_failed(
+				provisioning_proxy, imsi, path);
 			break;
 		}
 	}
@@ -111,11 +118,13 @@ send_signal(
 static
 void
 provisioning_done(
+	const char *imsi,
+	const char *path,
 	enum prov_result result,
 	void *param)
 {
-	LOG("Provisioning result %d", result);
-	send_signal(result);
+	LOG("Provisioning result %d imsi %s path %s", result, imsi, path);
+	send_signal(imsi, path, result);
 	pending_count--;
 	schedule_exit();
 }
@@ -196,7 +205,7 @@ provisioning_handle_push_message(
 			G_DBUS_ERROR_FAILED, "Unexpected content type");
 	} else {
 		if (!handle_message(imsi, bytes, len)) {
-			send_signal(PROV_FAILURE);
+			send_signal(imsi, NULL, PROV_FAILURE);
 			schedule_exit();
 		}
 		org_nemomobile_provisioning_interface_complete_handle_provisioning_message(proxy, call);
