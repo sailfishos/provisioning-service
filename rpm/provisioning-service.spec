@@ -1,6 +1,6 @@
 Name:       provisioning-service
 Summary:    OTA provisioning service
-Version:    0.0
+Version:    0.1.0
 Release:    1
 Group:      Communications/Telephony and IM
 License:    GPLv2
@@ -34,4 +34,3 @@ rm -rf %{buildroot}
 %{_sysconfdir}/dbus-1/system.d/provisioning.conf
 %{_datadir}/dbus-1/system-services/org.nemomobile.provisioning.service
 %{_sysconfdir}/ofono/push_forwarder.d/ofono-provisioning.conf
-
