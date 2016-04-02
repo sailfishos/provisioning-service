@@ -4,5 +4,6 @@ Description=Provisioning service
 [Service]
 Type=dbus
 BusName=org.nemomobile.provisioning
-ExecStart=/usr/libexec/provisioning-service
+EnvironmentFile=-/var/lib/environment/provisioning-service/*.conf
+ExecStart=/usr/libexec/provisioning-service $DEBUG_ARGS
 User=nemo
