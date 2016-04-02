@@ -530,7 +530,6 @@ provisioning_manager_valid(
 		ofono->sim_list = g_slist_append(ofono->sim_list,
 			provisioning_sim_new(ofono, modems->pdata[i]));
 	}
-	g_ptr_array_unref(modems);
 }
 
 static

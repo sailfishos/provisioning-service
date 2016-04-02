@@ -9,8 +9,9 @@ Source0:    %{name}-%{version}.tar.bz2
 BuildRequires:  pkgconfig(glib-2.0)
 BuildRequires:  pkgconfig(dbus-1)
 BuildRequires:  pkgconfig(libwbxml2)
-BuildRequires:  pkgconfig(libgofono)
+BuildRequires:  pkgconfig(libgofono) >= 2.0.0
 BuildRequires:  pkgconfig(libglibutil)
+Requires:  libgofono >= 2.0.0
 Requires:  ofono
 
 %description
