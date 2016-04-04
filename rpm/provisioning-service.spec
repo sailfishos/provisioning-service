@@ -1,6 +1,6 @@
 Name:       provisioning-service
 Summary:    OTA provisioning service
-Version:    0.1.0
+Version:    0.1.1
 Release:    1
 Group:      Communications/Telephony and IM
 License:    GPLv2
