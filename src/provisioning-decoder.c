@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2014-2015 Jolla Ltd.
+ *  Copyright (C) 2014-2017 Jolla Ltd.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 2 as
@@ -9,11 +9,6 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
- *
  */
 
 #include "provisioning-decoder.h"
@@ -32,7 +27,7 @@ extern const WBXMLAttrEntry sv_prov10_attr_table[];
 extern const WBXMLAttrValueEntry sv_prov10_attr_value_table[];
 
 static const WBXMLLangEntry prov_table[] = {
-    {
+	{
 		WBXML_LANG_PROV10,
 		&sv_prov10_public_id,
 		sv_prov10_tag_table,
@@ -182,7 +177,7 @@ provisioning_wbxml_end_element(
 static
 void
 provisioning_wbxml_chars_free(
-    gpointer data)
+	gpointer data)
 {
 	g_hash_table_destroy(data);
 }
@@ -212,8 +207,8 @@ provisioning_wbxml_chars_find(
 static
 void
 provisioning_wbxml_chars_merge(
-	GHashTable* dest,
-	GHashTable* src)
+	GHashTable *dest,
+	GHashTable *src)
 {
 	if (src) {
 		GHashTableIter iter;
@@ -228,7 +223,7 @@ provisioning_wbxml_chars_merge(
 static
 enum prov_authtype
 provisioning_wbxml_chars_authtype(
-	GHashTable* chars)
+	GHashTable *chars)
 {
 	const char *authtype = g_hash_table_lookup(chars, PARM_AUTHTYPE);
 	if (authtype) {
@@ -252,7 +247,7 @@ struct provisioning_data*
 provisioning_wbxml_context_data(
 	struct provisioning_wbxml_context *context)
 {
-	struct provisioning_data* data = g_new0(struct provisioning_data, 1);
+	struct provisioning_data *data = g_new0(struct provisioning_data, 1);
 	GHashTable *mms_app, *mms_nap = NULL, *mms_proxy = NULL;
 	GHashTable *inet_app, *inet_nap = NULL;
 
@@ -294,7 +289,7 @@ provisioning_wbxml_context_data(
 			PARM_APPID, APPID_MMS_2);
 	}
 	if (mms_app) {
-		const char* proxy = g_hash_table_lookup(mms_app, PARM_TO_PROXY);
+		const char *proxy = g_hash_table_lookup(mms_app, PARM_TO_PROXY);
 		const char *napid = g_hash_table_lookup(mms_app, PARM_TO_NAPID);
 		if (proxy) {
 			mms_proxy = provisioning_wbxml_chars_find(context->pxlogical,
@@ -462,13 +457,13 @@ void
 provisioning_internet_free(
 	struct provisioning_internet *internet)
 {
-    if (internet) {
+	if (internet) {
 		g_free(internet->name);
 		g_free(internet->apn);
 		g_free(internet->username);
 		g_free(internet->password);
-        g_free(internet);
-    }
+		g_free(internet);
+	}
 }
 
 static
@@ -476,16 +471,16 @@ void
 provisioning_mms_free(
 	struct provisioning_mms *mms)
 {
-    if (mms) {
+	if (mms) {
 		g_free(mms->name);
 		g_free(mms->apn);
 		g_free(mms->username);
 		g_free(mms->password);
 		g_free(mms->messageproxy);
 		g_free(mms->messagecenter);
-        g_free(mms->portnro);
-        g_free(mms);
-    }
+		g_free(mms->portnro);
+		g_free(mms);
+	}
 }
 
 void

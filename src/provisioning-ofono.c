@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2014-2016 Jolla Ltd.
+ *  Copyright (C) 2014-2017 Jolla Ltd.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 2 as
@@ -9,11 +9,6 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
- *
  */
 
 #include <gofono_manager.h>
@@ -66,7 +61,7 @@ struct provisioning_ofono {
 
 struct provisioning_sim {
 	OfonoSimMgr *simmgr;
-    OfonoConnMgr* connmgr;
+	OfonoConnMgr* connmgr;
 	gulong simmgr_valid_id;
 	gulong connmgr_valid_id;
 	struct provisioning_ofono *ofono;
@@ -75,7 +70,7 @@ struct provisioning_sim {
 };
 
 struct provisioning_context {
-    int refcount;
+	int refcount;
 	OfonoConnCtx* connctx;
 	gulong connctx_valid_id;
 	gulong connctx_active_id;
@@ -222,9 +217,9 @@ provisioning_sim_check(
 static
 void
 provisioning_property_request_done(
-    OfonoConnCtx* connctx,
-    const GError* error,
-    void* data)
+	OfonoConnCtx *connctx,
+	const GError *error,
+	void *data)
 {
 	struct provisioning_property_request *prop = data;
 	struct provisioning_context *ctx = prop->ctx;
@@ -342,8 +337,8 @@ provisioning_context_inactive(
 static
 void
 provisioning_context_active_changed(
-    OfonoConnCtx* connctx,
-    void* arg)
+	OfonoConnCtx *connctx,
+	void *arg)
 {
 	struct provisioning_context *ctx = arg;
 	if (ofono_connctx_valid(connctx) && !connctx->active) {
@@ -378,8 +373,8 @@ provisioning_context_valid(
 static
 void
 provisioning_context_valid_changed(
-    OfonoConnCtx* connctx,
-    void* arg)
+	OfonoConnCtx *connctx,
+	void *arg)
 {
 	if (ofono_connctx_valid(connctx)) {
 		struct provisioning_context *ctx = arg;
@@ -393,7 +388,7 @@ static
 struct provisioning_context*
 provisioning_context_new(
 	struct provisioning_sim *sim,
-	OfonoConnCtx* connctx,
+	OfonoConnCtx *connctx,
 	void (*set_properties)(struct provisioning_context *ctx),
 	int nreq)
 {
@@ -428,7 +423,7 @@ provisioning_connmgr_valid(
 	if (ofono->data->internet &&
 	    ofono->data->internet->apn &&
 	    ofono->data->internet->apn[0]) {
-		OfonoConnCtx* ctx = ofono_connmgr_get_context_for_type(sim->connmgr,
+		OfonoConnCtx *ctx = ofono_connmgr_get_context_for_type(sim->connmgr,
 			OFONO_CONNCTX_TYPE_INTERNET);
 		if (ctx) {
 			sim->internet = provisioning_context_new(sim, ctx,
@@ -439,7 +434,7 @@ provisioning_connmgr_valid(
 	if (ofono->data->mms &&
 	    ofono->data->mms->apn &&
 	    ofono->data->mms->apn[0]) {
-		OfonoConnCtx* ctx = ofono_connmgr_get_context_for_type(sim->connmgr,
+		OfonoConnCtx *ctx = ofono_connmgr_get_context_for_type(sim->connmgr,
 			OFONO_CONNCTX_TYPE_MMS);
 		if (ctx) {
 			sim->mms = provisioning_context_new(sim, ctx,
@@ -453,8 +448,8 @@ provisioning_connmgr_valid(
 static
 void
 provisioning_connmgr_valid_changed(
-    OfonoConnMgr* connmgr,
-    void* arg)
+	OfonoConnMgr *connmgr,
+	void *arg)
 {
 	if (ofono_connmgr_valid(connmgr)) {
 		struct provisioning_sim *sim = arg;
@@ -488,8 +483,8 @@ provisioning_sim_valid(
 static
 void
 provisioning_sim_valid_changed(
-    OfonoSimMgr* simmgr,
-    void* arg)
+	OfonoSimMgr *simmgr,
+	void *arg)
 {
 	if (ofono_simmgr_valid(simmgr)) {
 		struct provisioning_sim *sim = arg;
@@ -503,7 +498,7 @@ static
 struct provisioning_sim*
 provisioning_sim_new(
 	struct provisioning_ofono *ofono,
-    OfonoModem* modem)
+	OfonoModem *modem)
 {
 	struct provisioning_sim *sim = g_new0(struct provisioning_sim, 1);
 	const char *path = ofono_modem_path(modem);
@@ -524,7 +519,7 @@ void
 provisioning_manager_valid(
 	struct provisioning_ofono *ofono)
 {
-	GPtrArray* modems = ofono_manager_get_modems(ofono->manager);
+	GPtrArray *modems = ofono_manager_get_modems(ofono->manager);
 	guint i;
 	for (i=0; i<modems->len; i++) {
 		ofono->sim_list = g_slist_append(ofono->sim_list,
@@ -535,8 +530,8 @@ provisioning_manager_valid(
 static
 void
 provisioning_manager_valid_changed(
-    OfonoManager* manager,
-    void* arg)
+	OfonoManager *manager,
+	void *arg)
 {
 	if (manager->valid) {
 		struct provisioning_ofono *ofono = arg;
