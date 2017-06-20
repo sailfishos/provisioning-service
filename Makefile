@@ -6,7 +6,7 @@
 # Required packages
 #
 
-PKGS = gio-unix-2.0 glib-2.0 dbus-1 libwbxml2 libgofono libglibutil
+PKGS = gio-unix-2.0 glib-2.0 libwbxml2 libgofono libglibutil
 LIB_PKGS = $(PKGS)
 
 #

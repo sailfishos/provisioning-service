@@ -267,6 +267,27 @@ provisioning_context_request_submit(
 }
 
 static
+const char *
+provisioning_context_auth_string(
+	enum prov_authtype authtype,
+	const char *username,
+	const char *password)
+{
+	OFONO_CONNCTX_AUTH auth;
+	if ((!username || !username[0]) && (!password || !password[0])) {
+		/* No username or password */
+		auth = OFONO_CONNCTX_AUTH_NONE;
+	} else if (authtype == AUTH_PAP) {
+		auth = OFONO_CONNCTX_AUTH_PAP;
+	} else if (authtype == AUTH_CHAP) {
+		auth = OFONO_CONNCTX_AUTH_CHAP;
+	} else {
+		auth = OFONO_CONNCTX_AUTH_ANY;
+	}
+	return ofono_connctx_auth_string(auth);
+}
+
+static
 void
 provisioning_context_set_internet_properties(
 	struct provisioning_context *ctx)
@@ -283,9 +304,8 @@ provisioning_context_set_internet_properties(
 		provisioning_context_request_submit(ctx, PROV_PROPERTY_PASSWORD,
 			OFONO_CONNCTX_PROPERTY_PASSWORD, internet->password);
 		provisioning_context_request_submit(ctx, PROV_PROPERTY_AUTH,
-			OFONO_CONNCTX_PROPERTY_AUTH, ofono_connctx_auth_string(
-			(internet->authtype == AUTH_PAP) ?
-			OFONO_CONNCTX_AUTH_PAP : OFONO_CONNCTX_AUTH_CHAP));
+			OFONO_CONNCTX_PROPERTY_AUTH, provisioning_context_auth_string(
+				internet->authtype, internet->username, internet->password));
 	}
 }
 
@@ -305,9 +325,8 @@ provisioning_context_set_mms_properties(
 		provisioning_context_request_submit(ctx, PROV_PROPERTY_PASSWORD,
 			OFONO_CONNCTX_PROPERTY_PASSWORD, mms->password);
 		provisioning_context_request_submit(ctx, PROV_PROPERTY_AUTH,
-			OFONO_CONNCTX_PROPERTY_AUTH, ofono_connctx_auth_string(
-			(mms->authtype == AUTH_PAP) ?
-			OFONO_CONNCTX_AUTH_PAP : OFONO_CONNCTX_AUTH_CHAP));
+			OFONO_CONNCTX_PROPERTY_AUTH, provisioning_context_auth_string(
+				mms->authtype, mms->username, mms->password));
 		provisioning_context_request_submit(ctx, PROV_PROPERTY_MMS_CENTER,
 			OFONO_CONNCTX_PROPERTY_MMS_CENTER, mms->messagecenter);
 		if (mms->messageproxy && mms->messageproxy[0] &&
