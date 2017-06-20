@@ -23,6 +23,9 @@ A service for handling over-the-air (OTA) provisioning messages
 make generate
 make %{?jobs:-j%jobs} KEEP_SYMBOLS=1 release
 
+%check
+make -C test test
+
 %install
 rm -rf %{buildroot}
 %make_install
