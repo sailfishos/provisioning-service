@@ -6,7 +6,7 @@
 # Required packages
 #
 
-PKGS = gio-unix-2.0 glib-2.0 dbus-1 libwbxml2 libgofono libglibutil
+PKGS = gio-unix-2.0 glib-2.0 libwbxml2 libgofono libglibutil
 LIB_PKGS = $(PKGS)
 
 #
@@ -37,6 +37,19 @@ SPEC_DIR = .
 GEN_DIR = $(BUILD_DIR)
 DEBUG_BUILD_DIR = $(BUILD_DIR)/debug
 RELEASE_BUILD_DIR = $(BUILD_DIR)/release
+
+#
+# Code coverage
+#
+
+ifndef GCOV
+GCOV = 0
+endif
+
+ifneq ($(GCOV),0)
+CFLAGS += --coverage
+LDFLAGS += --coverage
+endif
 
 #
 # Tools and flags
@@ -117,7 +130,10 @@ debug: $(DEBUG_DEPS) $(DEBUG_EXE)
 release: $(RELEASE_DEPS) $(RELEASE_EXE)
 
 clean:
-	rm -fr $(BUILD_DIR) $(SRC_DIR)/*~
+	make -C test clean
+	rm -fr test/coverage/results test/coverage/*.gcov
+	rm -fr $(BUILD_DIR) RPMS installroot
+	rm *~ $(SRC_DIR)/*~
 
 $(GEN_DIR):
 	mkdir -p $@

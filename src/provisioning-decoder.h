@@ -18,8 +18,7 @@
 enum prov_authtype {
 	AUTH_UNKNOWN = 0,
 	AUTH_PAP,
-	AUTH_CHAP,
-	AUTH_MD5
+	AUTH_CHAP
 };
 
 struct provisioning_data {

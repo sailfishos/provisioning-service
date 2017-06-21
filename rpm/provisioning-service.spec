@@ -7,11 +7,10 @@ License:    GPLv2
 URL:        https://git.merproject.org/mer-core/provisioning-service
 Source0:    %{name}-%{version}.tar.bz2
 BuildRequires:  pkgconfig(glib-2.0)
-BuildRequires:  pkgconfig(dbus-1)
 BuildRequires:  pkgconfig(libwbxml2)
-BuildRequires:  pkgconfig(libgofono) >= 2.0.0
+BuildRequires:  pkgconfig(libgofono) >= 2.0.5
 BuildRequires:  pkgconfig(libglibutil)
-Requires:  libgofono >= 2.0.0
+Requires:  libgofono >= 2.0.5
 Requires:  ofono
 
 %description
@@ -22,7 +21,10 @@ A service for handling over-the-air (OTA) provisioning messages
 
 %build
 make generate
-make %{?_smp_mflags} KEEP_SYMBOLS=1 release
+make %{?jobs:-j%jobs} KEEP_SYMBOLS=1 release
+
+%check
+make -C test test
 
 %install
 rm -rf %{buildroot}

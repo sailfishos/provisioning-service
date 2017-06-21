@@ -76,7 +76,6 @@ static const WBXMLLangEntry prov_table[] = {
 
 #define AUTHTYPE_PAP                    "PAP"
 #define AUTHTYPE_CHAP                   "CHAP"
-#define AUTHTYPE_MD5                    "MD5"
 
 struct provisioning_wbxml_context {
 	GSList *napdef;                     /* NAPDEF characteristics */
@@ -231,8 +230,6 @@ provisioning_wbxml_chars_authtype(
 			return AUTH_PAP;
 		} else if (!strcmp(authtype, AUTHTYPE_CHAP)) {
 			return AUTH_CHAP;
-		} else if (!strcmp(authtype, AUTHTYPE_MD5)) {
-			return AUTH_MD5;
 		}
 	}
 	return AUTH_UNKNOWN;
