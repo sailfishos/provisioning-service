@@ -12,6 +12,7 @@ BuildRequires:  pkgconfig(libgofono) >= 2.0.5
 BuildRequires:  pkgconfig(libglibutil)
 Requires:  libgofono >= 2.0.5
 Requires:  ofono
+Requires:  sailfish-setup
 
 %description
 A service for handling over-the-air (OTA) provisioning messages
@@ -21,7 +22,7 @@ A service for handling over-the-air (OTA) provisioning messages
 
 %build
 make generate
-make %{?jobs:-j%jobs} KEEP_SYMBOLS=1 release
+make %{?_smp_mflags} KEEP_SYMBOLS=1 release
 
 %check
 make -C test test
