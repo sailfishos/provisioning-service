@@ -31,10 +31,17 @@ make -C test test
 rm -rf %{buildroot}
 %make_install
 
+# Move under /usr
+if [ -e %{buildroot}/lib ]; then
+  mkdir -p %{buildroot}%{_libdir}/systemd/system/
+  mv %{buildroot}/lib/systemd/system/* %{buildroot}%{_libdir}/systemd/system/
+  rm -rf %{buildroot}/lib
+fi
+
 %files
 %defattr(-,root,root,-)
 %{_libexecdir}/provisioning-service
-/lib/systemd/system/*.service
+/usr/lib/systemd/system/*.service
 %{_sysconfdir}/dbus-1/system.d/provisioning.conf
 %{_datadir}/dbus-1/system-services/org.nemomobile.provisioning.service
 %{_sysconfdir}/ofono/push_forwarder.d/ofono-provisioning.conf
