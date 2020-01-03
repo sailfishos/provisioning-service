@@ -6,5 +6,5 @@ Type=dbus
 BusName=org.nemomobile.provisioning
 EnvironmentFile=-/var/lib/environment/provisioning-service/*.conf
 ExecStart=/usr/libexec/provisioning-service $DEBUG_ARGS
-User=nemo
+User=radio
 SupplementaryGroups=sailfish-radio
