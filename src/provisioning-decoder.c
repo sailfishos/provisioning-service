@@ -14,7 +14,8 @@
 #include "provisioning-decoder.h"
 #include "log.h"
 
-#include <wbxml.h>
+#include <wbxml/wbxml.h>
+#include <wbxml/wbxml_parser.h>
 
 #define APPID_INTERNET      "w2"
 #define APPID_MMS_1         "w4"
@@ -107,8 +108,7 @@ void
 provisioning_wbxml_start_element(
 	void *ctx,
 	WBXMLTag *tag,
-	WBXMLAttribute **atts,
-	WB_BOOL empty)
+	WBXMLAttribute **atts)
 {
 	struct provisioning_wbxml_context *context = ctx;
 	const char *elem = (char*)wbxml_tag_get_xml_name(tag);
@@ -158,8 +158,7 @@ static
 void
 provisioning_wbxml_end_element(
 	void *ctx,
-	WBXMLTag *tag,
-	WB_BOOL empty)
+	WBXMLTag *tag)
 {
 	struct provisioning_wbxml_context *context = ctx;
 	const char *elem = (char*)wbxml_tag_get_xml_name(tag);
