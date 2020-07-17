@@ -175,11 +175,11 @@ endif
 install : $(RELEASE_EXE)
 	mkdir -p $(DESTDIR)/usr/libexec
 	mkdir -p $(DESTDIR)/etc/dbus-1/system.d
-	mkdir -p $(DESTDIR)/lib/systemd/system
+	mkdir -p $(DESTDIR)/usr/lib/systemd/system
 	mkdir -p $(DESTDIR)/usr/share/dbus-1/system-services
 	mkdir -p $(DESTDIR)/etc/ofono/push_forwarder.d
 	cp $(RELEASE_EXE) $(DESTDIR)/usr/libexec/
 	cp $(SRC_DIR)/provisioning.conf $(DESTDIR)/etc/dbus-1/system.d/
 	cp $(SRC_DIR)/org.nemomobile.provisioning.service $(DESTDIR)/usr/share/dbus-1/system-services/
 	cp ofono-provisioning.conf $(DESTDIR)/etc/ofono/push_forwarder.d/
-	cp $(SRC_DIR)/dbus-org.nemomobile.provisioning.service $(DESTDIR)/lib/systemd/system/
+	cp $(SRC_DIR)/dbus-org.nemomobile.provisioning.service $(DESTDIR)/usr/lib/systemd/system/
