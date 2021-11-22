@@ -28,11 +28,11 @@ make %{?_smp_mflags} KEEP_SYMBOLS=1 release
 make -C test test
 
 %install
-rm -rf %{buildroot}
 %make_install
 
 %files
 %defattr(-,root,root,-)
+%license COPYING
 %{_libexecdir}/provisioning-service
 %{_unitdir}/*.service
 %{_sysconfdir}/dbus-1/system.d/provisioning.conf
